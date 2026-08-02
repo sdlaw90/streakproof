@@ -1,0 +1,15 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body {
+  background:
+    radial-gradient(1200px 600px at 50% -10%, #16202c 0%, #0e1116 55%);
+  color: #e8edf4;
+  -webkit-font-smoothing: antialiased;
+}
+
+* { -webkit-tap-highlight-color: transparent; }
+
+/* Remove number input spinners for a cleaner look */
+input[type="text"]:focus, textarea:focus { outline: none; }
