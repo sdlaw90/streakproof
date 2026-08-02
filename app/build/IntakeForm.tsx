@@ -3,11 +3,15 @@
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { saveIntake, type IntakeResult } from "./actions";
+import ImageUpload from "./ImageUpload";
 import {
   GYM_INTAKE,
   missingAnswers,
+  validateWeights,
+  type ImageAnswer,
   type IntakeAnswers,
   type IntakeQuestion,
+  type WeightAnswer,
 } from "@/lib/intake";
 
 const FIELD =
@@ -68,7 +72,7 @@ export default function IntakeForm() {
   );
   const [answers, setAnswers] = useState<IntakeAnswers>({});
 
-  const set = (id: string, value: string | string[]) =>
+  const set = (id: string, value: IntakeAnswers[string]) =>
     setAnswers((prev) => ({ ...prev, [id]: value }));
 
   const toggle = (id: string, value: string) => {
@@ -81,6 +85,7 @@ export default function IntakeForm() {
     );
   };
 
+  const weightProblem = validateWeights(answers.weights as WeightAnswer | undefined);
   const missing = missingAnswers(GYM_INTAKE, answers);
   const answered = GYM_INTAKE.filter((q) => !q.optional).length - missing.length;
   const required = GYM_INTAKE.filter((q) => !q.optional).length;
@@ -110,13 +115,17 @@ export default function IntakeForm() {
         />
       ))}
 
-      {state?.error && (
+      {/* Objects can't ride along as form fields, so they're serialised here. */}
+      <input type="hidden" name="weights_json" value={JSON.stringify(answers.weights ?? null)} />
+      <input type="hidden" name="image_json" value={JSON.stringify(answers.inspo_image ?? null)} />
+
+      {(state?.error || weightProblem) && (
         <p className="rounded-lg bg-hot/10 px-3 py-2 text-sm text-hot" role="alert">
-          {state.error}
+          {state?.error ?? weightProblem}
         </p>
       )}
 
-      <Submit disabled={missing.length > 0} />
+      <Submit disabled={missing.length > 0 || !!weightProblem} />
 
       {missing.length > 0 && (
         <p className="text-center text-xs text-faint">
@@ -137,7 +146,7 @@ function Question({
   q: IntakeQuestion;
   index: number;
   answers: IntakeAnswers;
-  onSet: (id: string, value: string | string[]) => void;
+  onSet: (id: string, value: IntakeAnswers[string]) => void;
   onToggle: (id: string, value: string) => void;
 }) {
   const value = answers[q.id];
@@ -195,6 +204,20 @@ function Question({
         />
       )}
 
+      {q.kind === "weights" && (
+        <Weights
+          value={(value as WeightAnswer) ?? { unit: "lb" }}
+          onChange={(v) => onSet(q.id, v)}
+        />
+      )}
+
+      {q.kind === "image" && (
+        <ImageUpload
+          value={value as ImageAnswer | undefined}
+          onChange={(v) => onSet(q.id, v)}
+        />
+      )}
+
       {q.kind === "longtext" && (
         <textarea
           name={q.id}
@@ -205,6 +228,72 @@ function Question({
           className={FIELD}
         />
       )}
+    </div>
+  );
+}
+
+function Weights({
+  value,
+  onChange,
+}: {
+  value: WeightAnswer;
+  onChange: (v: WeightAnswer) => void;
+}) {
+  const num = (s: string): number | undefined => {
+    const t = s.trim();
+    if (!t) return undefined;
+    const n = Number(t);
+    return Number.isFinite(n) ? n : undefined;
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex gap-2">
+        {(["lb", "kg"] as const).map((u) => (
+          <button
+            key={u}
+            type="button"
+            onClick={() => onChange({ ...value, unit: u })}
+            className={
+              "rounded-lg border px-3 py-1.5 text-sm font-semibold transition " +
+              (value.unit === u
+                ? "border-accent bg-accent/10 text-accent"
+                : "border-line bg-panel2 text-muted")
+            }
+          >
+            {u}
+          </button>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <label className="block">
+          <span className="mb-1 block text-xs font-semibold text-muted">Current</span>
+          <input
+            type="number"
+            inputMode="decimal"
+            min={1}
+            step="0.1"
+            value={value.current ?? ""}
+            onChange={(e) => onChange({ ...value, current: num(e.target.value) })}
+            placeholder={value.unit}
+            className={FIELD}
+          />
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-xs font-semibold text-muted">Goal</span>
+          <input
+            type="number"
+            inputMode="decimal"
+            min={1}
+            step="0.1"
+            value={value.goal ?? ""}
+            onChange={(e) => onChange({ ...value, goal: num(e.target.value) })}
+            placeholder={value.unit}
+            className={FIELD}
+          />
+        </label>
+      </div>
     </div>
   );
 }

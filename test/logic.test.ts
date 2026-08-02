@@ -2,7 +2,7 @@ import { computeStats } from "@/lib/stats";
 import { sanitizeLogDate, todayIn, formatISODate } from "@/lib/dates";
 import { greetingFor, suggestDay } from "@/lib/suggest";
 import { validateSignup, validateRecovery, normalizeAnswer } from "@/lib/validate";
-import { GYM_INTAKE, missingAnswers } from "@/lib/intake";
+import { GYM_INTAKE, missingAnswers, validateWeights, toPounds } from "@/lib/intake";
 
 let fails = 0;
 function check(name: string, cond: boolean, extra = "") {
@@ -133,6 +133,28 @@ check("session length is asked (the gap in the v1 intake)",
   GYM_INTAKE.some((q) => q.id === "session_length"));
 check("name is not asked twice",
   !GYM_INTAKE.some((q) => q.id === "name"));
+check("weights and inspo image are both optional",
+  ["weights", "inspo_image"].every((id) => GYM_INTAKE.find((q) => q.id === id)?.optional));
+check("an object answer doesn't read as unanswered",
+  !missingAnswers(GYM_INTAKE, { weights: { current: 200, unit: "lb" } }).includes("weights"));
+
+console.log("\nweights:");
+check("nothing entered is valid", validateWeights(undefined) === null);
+check("empty-but-present is valid", validateWeights({ unit: "lb" }) === null);
+check("normal pounds accepted", validateWeights({ current: 210, goal: 185, unit: "lb" }) === null);
+check("normal kilos accepted", validateWeights({ current: 95, goal: 84, unit: "kg" }) === null);
+check("kg entered while lb selected is caught",
+  validateWeights({ current: 4, unit: "lb" }) !== null);
+check("absurdly high rejected", validateWeights({ current: 4000, unit: "lb" }) !== null);
+check("zero rejected", validateWeights({ current: 0, unit: "lb" }) !== null);
+check("negative rejected", validateWeights({ goal: -10, unit: "lb" }) !== null);
+check("NaN rejected", validateWeights({ current: Number.NaN, unit: "lb" }) !== null);
+check("a goal above current is allowed — people bulk",
+  validateWeights({ current: 150, goal: 175, unit: "lb" }) === null);
+check("90kg is inside the pound bounds once converted",
+  validateWeights({ current: 90, unit: "kg" }) === null);
+check("kg conversion is right", Math.round(toPounds(100, "kg")) === 220);
+check("lb passes through", toPounds(180, "lb") === 180);
 
 console.log(fails === 0 ? "\nAll stats/date checks passed.\n" : `\n${fails} FAILED\n`);
 process.exit(fails ? 1 : 0);

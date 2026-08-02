@@ -53,6 +53,18 @@ Every version below is a git tag (`v0.1.0`). Compare links at the bottom.
   original templates: the name question is gone (the profile has it) and
   "how long have you got per session?" is new, because the app displays duration
   estimates and had no idea what the user's budget was.
+- **Current and goal weight on the intake**, both optional, with a lb/kg
+  toggle. Validation is a typo guard only — impossible numbers and unit
+  mix-ups — because it isn't the app's business to editorialise about a number
+  on a scale. A goal above current is explicitly allowed; people bulk. The care
+  belongs in the generator, which gets a hard calorie floor and no
+  aggressive-cut presets before any of this goes public.
+- **An optional reference photo on the intake**, uploaded to a **private**
+  storage bucket. Per-user folders enforced by RLS on `storage.objects`, a 5 MB
+  cap and an images-only MIME allowlist enforced by the bucket rather than only
+  by the client, and no public-read policy at all — reads go through expiring
+  signed URLs. `text/html` is excluded specifically; a bucket that accepts it is
+  a stored-XSS vector.
 - **`gen_seed.py --only <slugs>`**, which is what makes a delta template
   migration possible now that the original is applied and immutable.
 - Nineteen new assertions in `npm test` (46 total) covering signup and recovery
@@ -117,11 +129,11 @@ Every version below is a git tag (`v0.1.0`). Compare links at the bottom.
 
 ### Database
 
-Two migrations, **neither applied to production yet** — both need
-`npm run db:push`:
+Three migrations. The third needs `npm run db:push`:
 
-- `20260803000001_account_recovery.sql`
-- `20260803000002_more_templates.sql`
+- `20260803000001_account_recovery.sql` — applied
+- `20260803000002_more_templates.sql` — applied
+- `20260803000003_intake_images.sql` — **not yet applied**
 
 Both were applied in order against stock Postgres 16 with the RLS harness
 passing before being committed. See [docs/MIGRATIONS.md](docs/MIGRATIONS.md).

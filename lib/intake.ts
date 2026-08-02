@@ -14,7 +14,13 @@
 // shape lives here rather than in the database on purpose — intake questions
 // change often, and every change would otherwise be a migration.
 
-export type QuestionKind = "single" | "multi" | "text" | "longtext";
+export type QuestionKind =
+  | "single"
+  | "multi"
+  | "text"
+  | "longtext"
+  | "weights"
+  | "image";
 
 export type IntakeQuestion = {
   id: string;
@@ -26,7 +32,19 @@ export type IntakeQuestion = {
   optional?: boolean;
 };
 
-export const INTAKE_VERSION = 1;
+export const INTAKE_VERSION = 2;
+
+/** Sane bounds, in pounds. Anything outside these is a typo, not a person. */
+export const WEIGHT_MIN_LB = 50;
+export const WEIGHT_MAX_LB = 1000;
+
+export const KG_PER_LB = 0.45359237;
+
+export type WeightUnit = "lb" | "kg";
+
+export function toPounds(value: number, unit: WeightUnit): number {
+  return unit === "kg" ? value / KG_PER_LB : value;
+}
 
 export const GYM_INTAKE: IntakeQuestion[] = [
   {
@@ -116,6 +134,20 @@ export const GYM_INTAKE: IntakeQuestion[] = [
     options: ["Yes", "No"],
   },
   {
+    id: "weights",
+    prompt: "Current and goal weight?",
+    hint: "Both optional, and neither changes whether the plan works. They only help size the conditioning and the protein target.",
+    kind: "weights",
+    optional: true,
+  },
+  {
+    id: "inspo_image",
+    prompt: "Got a picture of the look you're after?",
+    hint: "Optional. A physique you like, a photo of yourself from a while back, anything. Private to your account — nobody else can see it.",
+    kind: "image",
+    optional: true,
+  },
+  {
     id: "goal_note",
     prompt: "Any specific look or goal in mind?",
     hint: 'e.g. "want to look like I lift but still enjoy food", "run a 5K", "stronger for hiking".',
@@ -132,7 +164,46 @@ export const GYM_INTAKE: IntakeQuestion[] = [
   },
 ];
 
-export type IntakeAnswers = Record<string, string | string[]>;
+export type WeightAnswer = {
+  current?: number;
+  goal?: number;
+  unit: WeightUnit;
+};
+
+export type ImageAnswer = {
+  /** Storage path inside the private `intake` bucket: `<user_id>/<file>`. */
+  path: string;
+  filename: string;
+};
+
+export type IntakeAnswers = Record<
+  string,
+  string | string[] | WeightAnswer | ImageAnswer | undefined
+>;
+
+/**
+ * Check the weights are plausible.
+ *
+ * Deliberately only a typo guard — it rejects impossible numbers and a goal
+ * that's the wrong side of arithmetic, and nothing else. It is not the app's
+ * business to tell someone their goal is wrong, and a fitness app that
+ * editorialises about a number on a scale is one people delete. The place to
+ * be careful is the *generator*: whatever it produces from these has a hard
+ * floor on calories and no aggressive-cut presets. See STATEOFPLAY §6.
+ */
+export function validateWeights(w: WeightAnswer | undefined): string | null {
+  if (!w) return null;
+  const check = (v: number | undefined, label: string): string | null => {
+    if (v == null) return null;
+    if (!Number.isFinite(v) || v <= 0) return `${label} doesn't look like a number.`;
+    const lb = toPounds(v, w.unit);
+    if (lb < WEIGHT_MIN_LB || lb > WEIGHT_MAX_LB) {
+      return `${label} looks like a typo — check the units.`;
+    }
+    return null;
+  };
+  return check(w.current, "Current weight") ?? check(w.goal, "Goal weight");
+}
 
 /** Which required questions are still unanswered. Empty means ready to submit. */
 export function missingAnswers(
@@ -144,6 +215,7 @@ export function missingAnswers(
       if (q.optional) return false;
       const a = answers[q.id];
       if (Array.isArray(a)) return a.length === 0;
+      if (a && typeof a === "object") return false; // weights / image objects
       return !a || !String(a).trim();
     })
     .map((q) => q.id);

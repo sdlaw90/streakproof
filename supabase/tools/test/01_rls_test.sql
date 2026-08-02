@@ -315,3 +315,66 @@ begin
 end $$;
 
 reset role;
+
+-- ---------------------------------------------------------------------------
+-- Intake image storage (20260803000003)
+-- ---------------------------------------------------------------------------
+do $$
+declare b record;
+begin
+  select * into b from storage.buckets where id = 'intake';
+  if b is null then raise exception 'FAIL: intake bucket missing'; end if;
+  if b.public then
+    raise exception 'FAIL: intake bucket is PUBLIC — reference photos would be world-readable';
+  end if;
+  if b.file_size_limit is null or b.file_size_limit > 10485760 then
+    raise exception 'FAIL: intake bucket has no sane size limit (%)', b.file_size_limit;
+  end if;
+  if b.allowed_mime_types is null then
+    raise exception 'FAIL: intake bucket accepts any mime type';
+  end if;
+  if 'text/html' = any(b.allowed_mime_types) then
+    raise exception 'FAIL: intake bucket allows text/html — stored XSS';
+  end if;
+  raise notice 'PASS: intake bucket is private, size-capped and images-only';
+end $$;
+
+set role authenticated;
+set session "test.uid" = '11111111-1111-1111-1111-111111111111';
+
+do $$
+begin
+  insert into storage.objects (bucket_id, name)
+  values ('intake', '11111111-1111-1111-1111-111111111111/inspo.jpg');
+  raise notice 'PASS: a user can upload into their own folder';
+end $$;
+
+-- The whole point of the folder convention: user A must not be able to write
+-- into user B's folder, nor read what's in it.
+do $$
+declare v_blocked boolean := false;
+begin
+  begin
+    insert into storage.objects (bucket_id, name)
+    values ('intake', '22222222-2222-2222-2222-222222222222/sneaky.jpg');
+  exception when others then
+    v_blocked := true;
+  end;
+  if not v_blocked then
+    raise exception 'FAIL: a user wrote into another user''s folder';
+  end if;
+  raise notice 'PASS: writing into another user''s folder is blocked';
+end $$;
+
+set session "test.uid" = '22222222-2222-2222-2222-222222222222';
+do $$
+declare n int;
+begin
+  select count(*) into n from storage.objects where bucket_id = 'intake';
+  if n <> 0 then
+    raise exception 'FAIL: user B can see % of user A''s intake images', n;
+  end if;
+  raise notice 'PASS: intake images are private per user';
+end $$;
+
+reset role;
