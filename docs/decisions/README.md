@@ -40,6 +40,7 @@ principles are constraints on decisions, not decisions themselves).
 | [0013](0013-repair-the-seed-generator.md) | The seed generator holds its own data | Accepted |
 | [0014](0014-food-ui-mirrors-the-gym-side.md) | The food UI mirrors the gym side, with two deliberate breaks | Accepted |
 | [0015](0015-review-triggers-are-quiet-by-default.md) | Review triggers are quiet by default | Accepted |
+| [0016](0016-food-intake-before-a-plan.md) | Ask about taste and allergies before offering a plan | Accepted |
 
 0012 carries an explicit expiry — it describes something built to be removed,
 and the ADR says what removing it involves. If you're reading it after

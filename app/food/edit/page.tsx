@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import BottomNav from "@/components/BottomNav";
 import FoodEditor from "@/components/FoodEditor";
 import { loadFood } from "@/lib/food";
+import { createClient as createClientForIntake } from "@/lib/supabase/server";
+import { flagAllergens } from "@/lib/food-intake";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +13,23 @@ export default async function FoodEditPage() {
   if (ctx.redirect) redirect(ctx.redirect);
 
   const { userId, plan, items, builds, buildItems, prepSessions, prepTasks } = ctx;
+
+  // The declared allergies live on the person, not the plan, so the editor can
+  // flag them without the plan knowing anything about them.
+  const supabase = await createClientForIntake();
+  const { data: builder } = await supabase
+    .from("builder_profiles")
+    .select("data")
+    .eq("user_id", userId)
+    .eq("kind", "food")
+    .maybeSingle<{ data: { allergens?: string[] } }>();
+
+  const declaredAllergens = builder?.data?.allergens ?? [];
+  const flags: Record<string, string[]> = {};
+  for (const i of items) {
+    const hits = flagAllergens(i.name, declaredAllergens);
+    if (hits.length) flags[i.id] = hits;
+  }
 
   // In v2 an active plan is always one you own — clone_plan sets owner_id — so
   // this is belt and braces. RLS is what actually enforces it.
@@ -38,6 +57,7 @@ export default async function FoodEditPage() {
             buildItems={buildItems}
             prepSessions={prepSessions}
             prepTasks={prepTasks}
+            allergenFlags={flags}
           />
         ) : (
           <p className="rounded-2xl border border-line bg-panel p-5 text-sm text-muted">

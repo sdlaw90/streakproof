@@ -16,6 +16,7 @@ import {
   updatePrepTask,
   type EditResult,
 } from "@/app/food/edit/actions";
+import { allergenLabels } from "@/lib/food-intake";
 import type {
   Build,
   BuildItem,
@@ -50,6 +51,7 @@ export default function FoodEditor({
   buildItems,
   prepSessions,
   prepTasks,
+  allergenFlags,
 }: {
   planId: string;
   planName: string;
@@ -58,6 +60,8 @@ export default function FoodEditor({
   buildItems: BuildItem[];
   prepSessions: PrepSession[];
   prepTasks: PrepTask[];
+  /** food_item id -> declared allergens its name looks like it contains. */
+  allergenFlags: Record<string, string[]>;
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -291,7 +295,10 @@ export default function FoodEditor({
                   {roleItems.map((i) => (
                     <div
                       key={i.id}
-                      className="flex items-center gap-2 rounded-xl border border-line bg-panel px-3 py-2"
+                      className={
+                        "flex flex-wrap items-center gap-2 rounded-xl border bg-panel px-3 py-2 " +
+                        (allergenFlags[i.id]?.length ? "border-hot/50" : "border-line")
+                      }
                     >
                       <input
                         defaultValue={i.name}
@@ -324,6 +331,13 @@ export default function FoodEditor({
                       >
                         ✕
                       </button>
+                      {allergenFlags[i.id]?.length ? (
+                        <p className="w-full text-xs text-hot">
+                          Looks like it contains{" "}
+                          {allergenLabels(allergenFlags[i.id]).join(", ").toLowerCase()}
+                          {" "}— check it yourself.
+                        </p>
+                      ) : null}
                     </div>
                   ))}
 

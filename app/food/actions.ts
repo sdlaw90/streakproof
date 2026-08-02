@@ -4,6 +4,13 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { sanitizeLogDate, todayIn } from "@/lib/dates";
+import {
+  ALLERGENS,
+  CUISINES,
+  FOOD_INTAKE_VERSION,
+  validateFoodIntake,
+  type FoodIntake,
+} from "@/lib/food-intake";
 
 export type FoodResult = { ok: boolean; error?: string };
 
@@ -132,6 +139,48 @@ export async function togglePrepTask(input: {
   if (error) return { ok: false, error: error.message };
 
   revalidatePath("/food/prep");
+  revalidatePath("/food");
+  return { ok: true };
+}
+
+/**
+ * Save the food intake (cuisines + allergies) to builder_profiles.
+ *
+ * Kept separate from choosing a plan on purpose: the intake is about the
+ * person and outlives any particular plan, so re-picking a template later
+ * shouldn't mean re-declaring an allergy.
+ */
+export async function saveFoodIntake(intake: FoodIntake): Promise<FoodResult> {
+  const problem = validateFoodIntake(intake);
+  if (problem) return { ok: false, error: problem };
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Not signed in." };
+
+  const clean: FoodIntake = {
+    version: FOOD_INTAKE_VERSION,
+    cuisines: intake.cuisines.filter((c) => CUISINES.some((x) => x.id === c)),
+    allergens: intake.allergens.filter((a) => ALLERGENS.some((x) => x.id === a)),
+    avoidNote: intake.avoidNote.trim().slice(0, 500),
+    favouritesNote: intake.favouritesNote.trim().slice(0, 500),
+  };
+
+  const { error } = await supabase.from("builder_profiles").upsert(
+    {
+      user_id: user.id,
+      kind: "food",
+      data: clean,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "user_id,kind" }
+  );
+
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath("/setup/food");
   revalidatePath("/food");
   return { ok: true };
 }

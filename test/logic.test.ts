@@ -4,6 +4,7 @@ import { greetingFor, suggestDay, suggestBuild, prepDueOn } from "@/lib/suggest"
 import { validateSignup, validateRecovery, normalizeAnswer } from "@/lib/validate";
 import { GYM_INTAKE, missingAnswers, validateWeights, toPounds } from "@/lib/intake";
 import { dueReviews, timeReview, stalledReview, adherenceReview, type ReviewInputs } from "@/lib/review";
+import { flagAllergens, validateFoodIntake, emptyFoodIntake, ALLERGENS, CUISINES } from "@/lib/food-intake";
 
 let fails = 0;
 function check(name: string, cond: boolean, extra = "") {
@@ -245,6 +246,44 @@ check("stall is listed before time",
     ?.reason === "stalled");
 check("season is never auto-raised",
   !dueReviews({ ...base, startedOn: "2026-01-01" }).some((r) => r.reason === "season"));
+
+console.log("\nfood intake:");
+check("no cuisine picked is rejected",
+  validateFoodIntake(emptyFoodIntake()) !== null);
+check("one cuisine is enough",
+  validateFoodIntake({ ...emptyFoodIntake(), cuisines: ["east_asian"] }) === null);
+check("allergens are optional",
+  validateFoodIntake({ ...emptyFoodIntake(), cuisines: ["latin"], allergens: [] }) === null);
+check("an over-long note is rejected", validateFoodIntake({
+  ...emptyFoodIntake(), cuisines: ["latin"], avoidNote: "x".repeat(501) }) !== null);
+check("every cuisine has a distinct id",
+  new Set(CUISINES.map((c) => c.id)).size === CUISINES.length);
+check("every allergen has keywords",
+  ALLERGENS.every((a) => a.keywords.length > 0));
+
+console.log("\nallergen flagging (hints, not safety):");
+check("peanut sauce flags peanut",
+  flagAllergens("Peanut sauce", ["peanut"]).includes("peanut"));
+check("matching is case-insensitive",
+  flagAllergens("PEANUT SAUCE", ["peanut"]).includes("peanut"));
+check("nothing declared -> nothing flagged",
+  flagAllergens("Peanut sauce", []).length === 0);
+check("an undeclared allergen isn't flagged",
+  flagAllergens("Peanut sauce", ["shellfish"]).length === 0);
+check("soy sauce flags wheat, which is the point of erring wide",
+  flagAllergens("Soy-ginger-garlic sauce", ["wheat"]).includes("wheat"));
+check("soy sauce also flags soy",
+  flagAllergens("Soy-ginger-garlic sauce", ["soy"]).includes("soy"));
+check("naan flags gluten", flagAllergens("Naan", ["gluten"]).includes("gluten"));
+check("shrimp flags shellfish",
+  flagAllergens("Shrimp", ["shellfish"]).includes("shellfish"));
+check("greek yogurt flags milk",
+  flagAllergens("Greek yogurt", ["milk"]).includes("milk"));
+check("tahini flags sesame", flagAllergens("Tahini", ["sesame"]).includes("sesame"));
+check("jasmine rice flags nothing",
+  flagAllergens("Jasmine rice", ALLERGENS.map((a) => a.id)).length === 0);
+check("one name can flag several allergens at once",
+  flagAllergens("Soy sauce", ["soy", "wheat", "gluten"]).length === 3);
 
 console.log(fails === 0 ? "\nAll stats/date checks passed.\n" : `\n${fails} FAILED\n`);
 process.exit(fails ? 1 : 0);

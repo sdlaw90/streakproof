@@ -28,6 +28,17 @@ Every version below is a git tag (`v0.1.0`). Compare links at the bottom.
 
 ### Added
 
+- **Food setup asks before it offers.** `/setup/food` now opens on two
+  questions — which cuisine families you want, and what you can't eat — instead
+  of a single template card. Answers go to `builder_profiles` with
+  `kind = 'food'`, stored against the person rather than the plan, so re-picking
+  a template later doesn't mean re-declaring an allergy. See
+  [ADR 0016](docs/decisions/0016-food-intake-before-a-plan.md).
+- **Declared allergens flag matching pantry items**, on the template card before
+  you choose it and in the food editor after. Flagging is explicitly a hint, not
+  a filter and not a safety check — it matches words in a name, can't read a
+  label, and every place it appears says so. Nothing is ever silently removed,
+  because removing it would imply the result is safe to eat.
 - **Plan reviews.** `lib/review.ts` implements the time, stalled and adherence
   checks; home records what's due and shows one quiet card with three plain
   options, one of them "it's fine as it is". Every threshold is deliberately
@@ -221,6 +232,17 @@ users, gym side complete.
 
 ### Added
 
+- **Food setup asks before it offers.** `/setup/food` now opens on two
+  questions — which cuisine families you want, and what you can't eat — instead
+  of a single template card. Answers go to `builder_profiles` with
+  `kind = 'food'`, stored against the person rather than the plan, so re-picking
+  a template later doesn't mean re-declaring an allergy. See
+  [ADR 0016](docs/decisions/0016-food-intake-before-a-plan.md).
+- **Declared allergens flag matching pantry items**, on the template card before
+  you choose it and in the food editor after. Flagging is explicitly a hint, not
+  a filter and not a safety check — it matches words in a name, can't read a
+  label, and every place it appears says so. Nothing is ever silently removed,
+  because removing it would imply the result is safe to eat.
 - **Plan reviews.** `lib/review.ts` implements the time, stalled and adherence
   checks; home records what's due and shows one quiet card with three plain
   options, one of them "it's fine as it is". Every threshold is deliberately
