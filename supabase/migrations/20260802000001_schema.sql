@@ -1,6 +1,6 @@
 -- ============================================================================
 --  Streakproof — database schema v2
---  Run FIRST in the Supabase SQL editor, then 02_functions.sql, then seed.sql.
+--  Applied by `supabase db push` (or paste into the SQL editor in filename order).
 --  Safe to re-run: uses "if not exists" / "or replace" throughout.
 --
 --  WHAT CHANGED FROM v1 (and why)

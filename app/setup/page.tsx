@@ -56,7 +56,7 @@ export default async function SetupPage({
 
         {!templates?.length && (
           <p className="rounded-xl border border-line bg-panel p-5 text-center text-sm text-muted">
-            No templates found. Run <code>supabase/v2/04_seed.sql</code> in the
+            No templates found. Run <code>supabase/migrations/20260802000004_templates.sql</code> in the
             Supabase SQL editor.
           </p>
         )}

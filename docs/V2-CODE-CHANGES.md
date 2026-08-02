@@ -1,6 +1,6 @@
 # Streakproof — v1 → v2 code change map
 
-The v2 SQL lives in `supabase/v2/`. Nothing was ever deployed, so there is no
+The v2 SQL lives in `supabase/migrations/`. Nothing was ever deployed, so there is no
 data to migrate: v2 is a fresh install.
 
 ## Status
@@ -140,12 +140,14 @@ separately (`builds.is_fallback`) so a bad day has a designed answer.
 
 ## Testing
 
-`supabase/v2/test/` runs the whole schema against stock Postgres:
+`supabase/tools/test/` runs the whole schema against stock Postgres, applying the
+migrations in the same filename order `supabase db push` uses:
 
 ```bash
-psql -f test/00_supabase_stub.sql   # fakes auth.users + auth.uid()
-psql -f 01_schema.sql -f 02_functions.sql -f 03_rls.sql -f 04_seed.sql
-psql -f test/01_rls_test.sql        # asserts; aborts on any failure
+createdb sp
+psql -d sp -f supabase/tools/test/00_supabase_stub.sql   # fakes auth.users + auth.uid()
+for f in supabase/migrations/*.sql; do psql -d sp -v ON_ERROR_STOP=1 -f "$f"; done
+psql -d sp -f supabase/tools/test/01_rls_test.sql        # asserts; aborts on any failure
 ```
 
 Currently passing, including the two cases v1 could not do:
@@ -157,5 +159,6 @@ and the clone's real failure mode — copied `build_items` still pointing at the
 template's `food_items` instead of the new copies — is asserted against
 explicitly.
 
-> The stub is **test-only**. Never run `test/00_supabase_stub.sql` against
+> The stub is **test-only** and lives outside `migrations/` on purpose, so
+> `supabase db push` never sees it. Never run it against
 > Supabase; it would shadow the real auth schema.

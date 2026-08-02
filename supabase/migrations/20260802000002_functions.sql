@@ -1,5 +1,5 @@
 -- ============================================================================
---  Streakproof — functions (run AFTER 01_schema.sql)
+--  Streakproof — functions (runs after the schema migration)
 --
 --  The important one is clone_plan(): it is what replaces v1's "first user to
 --  pick a program owns it forever" model. Picking a template copies it into a

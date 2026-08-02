@@ -38,21 +38,46 @@ GitHub, Vercel, and Supabase accounts.
 
 ## Step 2 — Create the database tables
 
-Use the **v2** schema in `supabase/v2/`. Run the four files **in order**, each as
-its own query in **SQL Editor → New query**:
+The schema lives in `supabase/migrations/`, so the Supabase CLI can push it for
+you. **You do not need to copy-paste SQL.**
 
-| # | File | What it does |
-|---|------|--------------|
-| 1 | `supabase/v2/01_schema.sql` | Tables |
-| 2 | `supabase/v2/02_functions.sql` | `clone_plan()`, duration estimates, RLS helpers |
-| 3 | `supabase/v2/03_rls.sql` | Row-level security policies |
-| 4 | `supabase/v2/04_seed.sql` | The template library (2 gym plans + 1 meal plan) |
+```bash
+npx supabase login          # opens a browser
+npx supabase link --project-ref <your-project-ref>
+npx supabase db push        # asks for your database password
+```
 
-Each should report "Success". All four are safe to re-run.
+Your project ref is the subdomain of your project URL — for
+`https://abcdefgh.supabase.co` it's `abcdefgh`. The database password is the one
+you set when you created the project (resettable under **Project Settings →
+Database** if it's lost).
 
-> `supabase/schema.sql` and `supabase/seed.sql` are **v1**, kept for reference —
-> don't run them. Since nothing was ever deployed, v2 is a fresh install rather
-> than a migration. See `docs/V2-CODE-CHANGES.md` for what changed and why.
+That applies four migrations in filename order:
+
+| File | What it does |
+|------|--------------|
+| `20260802000001_schema.sql` | Tables |
+| `20260802000002_functions.sql` | `clone_plan()`, duration estimates, RLS helpers |
+| `20260802000003_rls.sql` | Row-level security policies |
+| `20260802000004_templates.sql` | Template library (2 gym plans + 1 meal plan) |
+
+Then confirm it landed:
+
+```bash
+npm run verify:db
+```
+
+<details>
+<summary>Fallback: paste the SQL by hand</summary>
+
+If you'd rather not install the CLI, open each file in
+`supabase/migrations/` **in filename order** and run it as its own query in
+**SQL Editor → New query**, checking for "Success" after each. All four are
+safe to re-run.
+</details>
+
+> `supabase/schema.sql` and `supabase/seed.sql` are the **v1** schema, kept for
+> reference — don't run them. See `docs/V2-CODE-CHANGES.md` for what changed.
 
 ## Step 3 — Turn off email confirmation (recommended)
 So you and Ely can sign up and be straight in, no confirmation email:

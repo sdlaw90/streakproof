@@ -1,5 +1,5 @@
 -- ============================================================================
---  Streakproof — row level security (run AFTER 02_functions.sql)
+--  Streakproof — row level security (runs after the functions migration)
 --
 --  Shape of the rules:
 --    * Templates (owner_id null, is_template) are readable by every signed-in

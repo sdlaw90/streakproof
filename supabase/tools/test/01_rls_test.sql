@@ -1,6 +1,6 @@
 -- ============================================================================
 --  LOCAL TEST ONLY. Verifies the things v2 is supposed to fix.
---  Run after the stub + 01..04. Any failure raises and aborts.
+--  Run after the stub + all four migrations. Any failure raises and aborts.
 -- ============================================================================
 
 \set ON_ERROR_STOP on
