@@ -1,7 +1,7 @@
 {
-  "name": "Gym Tracker",
-  "short_name": "Gym",
-  "description": "Personal workout tracker",
+  "name": "Streakproof",
+  "short_name": "Streakproof",
+  "description": "Workouts and meal prep for ADHD brains. Miss a day — the plan survives.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0e1116",

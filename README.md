@@ -1,4 +1,4 @@
-# 🏋️ Gym Tracker
+# 🔁 Streakproof
 
 A private workout tracker for two people (you + Ely). Each person logs in, sees
 their own program, logs every set (weight × reps), and it all **persists and
@@ -31,15 +31,28 @@ GitHub, Vercel, and Supabase accounts.
 
 ## Step 1 — Create the Supabase project
 1. Go to the [Supabase dashboard](https://supabase.com/dashboard) → **New project**.
-2. Name it `gym-tracker`, set a database password (save it somewhere), pick the region closest to you.
+2. Name it `streakproof`, set a database password (save it somewhere), pick the region closest to you.
 3. Wait ~2 minutes for it to finish provisioning.
 
 > Keeping this separate from Squirrelingo is deliberate — nothing you do here can ever affect that app.
 
 ## Step 2 — Create the database tables
-1. In the project sidebar: **SQL Editor → New query**.
-2. Open **`supabase/schema.sql`** from this folder, copy the whole file, paste it in, click **Run**. You should see "Success".
-3. New query again. Open **`supabase/seed.sql`**, copy it all, paste, **Run**. This loads both workout programs.
+
+Use the **v2** schema in `supabase/v2/`. Run the four files **in order**, each as
+its own query in **SQL Editor → New query**:
+
+| # | File | What it does |
+|---|------|--------------|
+| 1 | `supabase/v2/01_schema.sql` | Tables |
+| 2 | `supabase/v2/02_functions.sql` | `clone_plan()`, duration estimates, RLS helpers |
+| 3 | `supabase/v2/03_rls.sql` | Row-level security policies |
+| 4 | `supabase/v2/04_seed.sql` | The template library (2 gym plans + 1 meal plan) |
+
+Each should report "Success". All four are safe to re-run.
+
+> `supabase/schema.sql` and `supabase/seed.sql` are **v1**, kept for reference —
+> don't run them. Since nothing was ever deployed, v2 is a fresh install rather
+> than a migration. See `docs/V2-CODE-CHANGES.md` for what changed and why.
 
 ## Step 3 — Turn off email confirmation (recommended)
 So you and Ely can sign up and be straight in, no confirmation email:
@@ -75,17 +88,17 @@ git init
 git add .
 git commit -m "Gym tracker"
 git branch -M main
-git remote add origin https://github.com/<your-username>/gym-tracker.git
+git remote add origin https://github.com/<your-username>/streakproof.git
 git push -u origin main
 ```
-(Create the empty `gym-tracker` repo on GitHub first if you haven't.)
+(Create the empty `streakproof` repo on GitHub first if you haven't.)
 
 ## Step 7 — Import into Vercel
-1. [vercel.com/new](https://vercel.com/new) → **Import** your `gym-tracker` repo. It auto-detects Next.js.
+1. [vercel.com/new](https://vercel.com/new) → **Import** your `streakproof` repo. It auto-detects Next.js.
 2. Expand **Environment Variables** and add the same two from your `.env.local`:
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-3. Click **Deploy**. After a minute you'll get a URL like `https://gym-tracker-xxx.vercel.app`.
+3. Click **Deploy**. After a minute you'll get a URL like `https://streakproof-xxx.vercel.app`.
 
 ## Step 8 — Point Supabase at your live URL
 Back in Supabase → **Authentication → URL Configuration** → set **Site URL** to

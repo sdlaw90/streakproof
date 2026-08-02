@@ -2,10 +2,15 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Gym Tracker",
-  description: "Personal workout tracker for Sean & Ely",
+  title: "Streakproof",
+  description:
+    "Workouts and meal prep for ADHD brains. Miss a day — the plan survives.",
   manifest: "/manifest.webmanifest",
-  appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "Gym" },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Streakproof",
+  },
 };
 
 export const viewport: Viewport = {

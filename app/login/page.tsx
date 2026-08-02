@@ -28,7 +28,7 @@ export default function LoginPage() {
     <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-5 py-10">
       <div className="mb-6 text-center">
         <div className="text-4xl">🏋️</div>
-        <h1 className="mt-2 text-2xl font-bold tracking-tight">Gym Tracker</h1>
+        <h1 className="mt-2 text-2xl font-bold tracking-tight">Streakproof</h1>
         <p className="mt-1 text-sm text-muted">
           {mode === "signin" ? "Sign in to your plan" : "Create your account"}
         </p>
