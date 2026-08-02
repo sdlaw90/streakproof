@@ -108,7 +108,7 @@ console.log("\nFunctions (02_functions.sql):");
   else pass("refresh_plan_estimates");
 }
 
-console.log("\nTemplates (04_seed.sql):");
+console.log("\nTemplates (visible signed-out, per migration 05):");
 if (!schemaLoaded) {
   fail("skipped — tables are missing, run 01_schema.sql first");
 } else {
@@ -120,7 +120,13 @@ if (!schemaLoaded) {
   if (error) {
     fail(`could not read templates — ${error.message}`);
   } else if (!data?.length) {
-    fail("no templates found — did 04_seed.sql run?");
+    fail(
+      "no templates visible to a signed-out client.\n" +
+        "           Either the templates migration didn't run, or the anon read\n" +
+        "           policy is missing (migration 20260802000005). Check with:\n" +
+        "             select count(*) from plans where is_template;\n" +
+        "           in the SQL editor — that bypasses RLS and tells you which."
+    );
   } else {
     for (const t of data) pass(`${t.kind.padEnd(4)} ${t.slug}  "${t.name}"`);
     const gym = data.filter((d) => d.kind === "gym").length;
@@ -154,12 +160,11 @@ if (failed === 0) {
 } else if (!schemaLoaded) {
   console.log(
     `❌ ${failed} check(s) failed. The schema isn't loaded.\n\n` +
-      "In the Supabase dashboard → SQL Editor, run these in order, each as its\n" +
-      "own query, checking for 'Success' after each:\n" +
-      "  1. supabase/v2/01_schema.sql\n" +
-      "  2. supabase/v2/02_functions.sql\n" +
-      "  3. supabase/v2/03_rls.sql\n" +
-      "  4. supabase/v2/04_seed.sql\n\n" +
+      "Push the migrations:\n" +
+      "  npx supabase link --project-ref <your-ref>\n" +
+      "  npx supabase db push\n\n" +
+      "Or paste each file in supabase/migrations/ into the SQL editor in\n" +
+      "filename order, checking for 'Success' after each.\n\n" +
       "If they HAVE been run, PostgREST's schema cache may be stale. Run:\n" +
       "  notify pgrst, 'reload schema';\n" +
       "and try again. Also confirm you're pointed at the right project — the URL\n" +
