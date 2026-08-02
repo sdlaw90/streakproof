@@ -245,6 +245,7 @@ boundary — see `docs/V2-CODE-CHANGES.md`.
 - **A page is blank / says not signed in** → Vercel env vars missing or misspelled. Re-check Step 7, then redeploy.
 - **`npm run verify:db` says no templates are visible** → either the templates migration didn't run or the anon read policy is missing. Run `select count(*) from plans where is_template;` in the SQL editor — that bypasses RLS and tells you which.
 - **App feels "asleep" on first open of the day** → free-tier Supabase pauses after ~1 week idle and wakes on the next visit.
+- **`npm run build` warns about multiple lockfiles** → there's a stray `package-lock.json` in a parent directory and Turbopack picked that as the workspace root. Delete the stray one; the build is unaffected on Vercel either way.
 
 ## Notes
 

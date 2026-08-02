@@ -1,8 +1,12 @@
 # Streakproof — state of play
 
 Written 2 Aug 2026, at the point of switching to a project with direct access to
-the local folder. Updated later the same day, after the app went live.
-Everything a fresh session needs to pick this up cold.
+the local folder. Updated at the end of that session, after the app went live
+and the stack was upgraded. Everything a fresh session needs to pick this up
+cold.
+
+**Current head:** `937d984` on `main`, deployed to production and rendering.
+Working tree clean. Nothing is in flight.
 
 ---
 
@@ -139,6 +143,9 @@ environment variables, build cache, and the app's own dependency graph.
   it deliberately skips `router.refresh()`, which would otherwise overwrite the
   inputs with the server's unchanged values and destroy what was just typed.
 
+Both were confirmed in the running app afterwards, not just in a build: logging
+a set, stepping back a day with `‹`, and checking the fields came up empty.
+
 **Dependency upgrade, 2 Aug 2026**
 
 The whole stack went to current, alongside the same exercise on Squirrelingo.
@@ -190,6 +197,14 @@ installing Next 9.3.3, so they stay until Next ships a patch.
 | **Food UI** | Schema and template exist; no screens. Makes the app daily rather than 3×/week. |
 | **AI builder** | The differentiator. Design agreed (below). |
 | **CI for migrations** | GitHub Action running `db push` on merge to `main`. Sean already added secrets in anticipation. |
+
+**Where to start next**
+
+Review triggers. They're pure functions next to `lib/stats.ts` with no DB
+access, so they're testable without a database, they're the smallest piece left,
+and the AI builder is worth much less without the loop that tells you when to
+regenerate. Food UI is the bigger user-facing win if you'd rather feel progress
+— the schema and a seeded template already exist, so it's screens only.
 
 ## 6. AI builder — agreed design, not yet built
 

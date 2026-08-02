@@ -144,6 +144,11 @@ PR detection. Client-supplied dates go through `sanitizeLogDate()`.
   the config they were built with. Redeploy after any settings change.
 - When a deployed app misbehaves but `npm run build` is clean locally, check the
   platform config before the code.
+- Turbopack picks the workspace root by walking up for lockfiles. A stray
+  `package-lock.json` in a parent directory (`C:\Users\sean\`, say) makes it
+  choose that instead, and it warns about "multiple lockfiles". Harmless on
+  Vercel, which only ever sees the repo, but delete the stray one locally rather
+  than pinning `turbopack.root` around it.
 
 ### Design language
 
