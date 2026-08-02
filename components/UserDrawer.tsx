@@ -24,6 +24,15 @@ type Item = {
   soon?: boolean;
 };
 
+const ACCOUNT_ITEMS: Item[] = [
+  {
+    label: "Password recovery",
+    hint: "Hint and security questions",
+    icon: "🔑",
+    href: "/recovery",
+  },
+];
+
 const PLAN_ITEMS: Item[] = [
   { label: "Edit your plan", hint: "Days, exercises, timing", icon: "⚙️", href: "/program" },
   { label: "Switch plan", hint: "Start from a different template", icon: "🔁", href: "/setup" },
@@ -172,6 +181,25 @@ export default function UserDrawer({
           <p className="mb-2 text-[11px] font-bold tracking-wider text-faint uppercase">
             Account
           </p>
+          <div className="mb-2 flex flex-col gap-1">
+            {ACCOUNT_ITEMS.map((item) => (
+              <button
+                key={item.label}
+                type="button"
+                onClick={() => item.href && go(item.href)}
+                className="flex items-center gap-3 rounded-xl px-3 py-3 text-left transition hover:bg-panel2"
+              >
+                <span className="text-lg leading-none">{item.icon}</span>
+                <span className="min-w-0">
+                  <span className="block text-sm font-semibold">{item.label}</span>
+                  {item.hint && (
+                    <span className="block text-xs text-faint">{item.hint}</span>
+                  )}
+                </span>
+              </button>
+            ))}
+          </div>
+
           <dl className="mb-4 space-y-1 px-3 text-sm">
             <div className="flex justify-between gap-3">
               <dt className="text-faint">Time zone</dt>

@@ -1,6 +1,8 @@
 import { computeStats } from "@/lib/stats";
 import { sanitizeLogDate, todayIn, formatISODate } from "@/lib/dates";
 import { greetingFor, suggestDay } from "@/lib/suggest";
+import { validateSignup, validateRecovery, normalizeAnswer } from "@/lib/validate";
+import { GYM_INTAKE, missingAnswers } from "@/lib/intake";
 
 let fails = 0;
 function check(name: string, cond: boolean, extra = "") {
@@ -82,6 +84,55 @@ check("6am -> morning", greetingFor(6) === "Good morning");
 check("noon -> afternoon", greetingFor(12) === "Good afternoon");
 check("6pm -> evening", greetingFor(18) === "Good evening");
 check("1am counts as evening, not morning", greetingFor(1) === "Good evening");
+
+console.log("\nsignup validation:");
+check("short password rejected",
+  validateSignup({ displayName: "Sean", password: "short", confirm: "short" }) !== null);
+check("mismatch rejected",
+  validateSignup({ displayName: "Sean", password: "longenough1", confirm: "longenough2" }) !== null);
+check("one-character name rejected",
+  validateSignup({ displayName: "S", password: "longenough1", confirm: "longenough1" }) !== null);
+check("whitespace-only name rejected",
+  validateSignup({ displayName: "   ", password: "longenough1", confirm: "longenough1" }) !== null);
+check("valid signup passes",
+  validateSignup({ displayName: "Sean", password: "longenough1", confirm: "longenough1" }) === null);
+
+console.log("\nrecovery validation:");
+const q3 = (a: string, b: string, c: string) => [
+  { question: "Q1", answer: a }, { question: "Q2", answer: b }, { question: "Q3", answer: c },
+];
+check("empty everything is rejected, not silently saved",
+  validateRecovery({ hint: "", questions: q3("", "", "") }) !== null);
+check("hint alone is fine",
+  validateRecovery({ hint: "the usual one", questions: q3("", "", "") }) === null);
+check("all three answers is fine",
+  validateRecovery({ hint: "", questions: q3("Fluffy", "Oak Lane", "Sprout") }) === null);
+check("two of three rejected",
+  validateRecovery({ hint: "", questions: q3("Fluffy", "Oak Lane", "") }) !== null);
+check("duplicate questions rejected", validateRecovery({
+  hint: "", questions: [
+    { question: "Q1", answer: "a1" }, { question: "Q1", answer: "a2" }, { question: "Q3", answer: "a3" },
+  ],
+}) !== null);
+check("over-long hint rejected",
+  validateRecovery({ hint: "x".repeat(201), questions: q3("", "", "") }) !== null);
+
+console.log("\nanswer normalisation (case/space must not lock anyone out):");
+check("case ignored", normalizeAnswer("  FLUFFY ") === "fluffy");
+check("inner whitespace collapsed", normalizeAnswer("Oak   Lane") === "oak lane");
+check("already-normal is unchanged", normalizeAnswer("sprout") === "sprout");
+
+console.log("\nintake:");
+check("empty intake lists every required question",
+  missingAnswers(GYM_INTAKE, {}).length === GYM_INTAKE.filter((q) => !q.optional).length);
+check("optional questions are never required",
+  missingAnswers(GYM_INTAKE, {}).every((id) => !GYM_INTAKE.find((q) => q.id === id)?.optional));
+check("an empty multi-select still counts as missing",
+  missingAnswers(GYM_INTAKE, { goals: [] }).includes("goals"));
+check("session length is asked (the gap in the v1 intake)",
+  GYM_INTAKE.some((q) => q.id === "session_length"));
+check("name is not asked twice",
+  !GYM_INTAKE.some((q) => q.id === "name"));
 
 console.log(fails === 0 ? "\nAll stats/date checks passed.\n" : `\n${fails} FAILED\n`);
 process.exit(fails ? 1 : 0);

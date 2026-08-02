@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Workout Plan — Quick Intake</title>
+<style>
+  :root{
+    --bg:#0e1116; --panel:#171c24; --panel2:#1e2530; --line:#2a323f;
+    --text:#e8edf4; --muted:#93a1b5; --faint:#6b7889;
+    --accent:#4fd08a; --accent2:#3aa6ff; --gold:#ffcf5c;
+    --radius:16px; --shadow:0 6px 24px rgba(0,0,0,.35);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{
+    background:radial-gradient(1200px 600px at 50% -10%,#16202c 0%,var(--bg) 55%);
+    color:var(--text);margin:0;padding:18px 14px 60px;max-width:640px;margin:0 auto;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.5;
+  }
+  h1{font-size:1.55rem;margin:.2rem 0 .1rem;letter-spacing:-.02em}
+  .sub{color:var(--muted);font-size:.95rem;margin:0 0 18px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    padding:16px 18px;margin-bottom:14px;box-shadow:var(--shadow)}
+  .q{font-weight:600;margin:0 0 4px}
+  .hint{color:var(--faint);font-size:.82rem;margin:0 0 10px}
+  .opts{display:flex;flex-direction:column;gap:8px}
+  .opt{display:flex;align-items:center;gap:11px;border:1px solid var(--line);background:var(--panel2);
+    border-radius:11px;padding:11px 13px;cursor:pointer;transition:.12s;user-select:none}
+  .opt:hover{border-color:var(--faint)}
+  .opt input{accent-color:var(--accent);width:18px;height:18px;flex:0 0 auto}
+  .opt.sel{border-color:var(--accent);background:linear-gradient(180deg,rgba(79,208,138,.10),rgba(30,37,48,.6))}
+  input[type=text], textarea{width:100%;background:var(--panel2);border:1px solid var(--line);
+    color:var(--text);border-radius:10px;padding:11px 12px;font-size:.95rem;font-family:inherit;resize:vertical}
+  input[type=text]:focus, textarea:focus{outline:none;border-color:var(--accent2)}
+  textarea{min-height:64px}
+  .num{color:var(--accent);font-weight:700;margin-right:6px}
+  .btn{display:block;width:100%;border:none;border-radius:12px;padding:15px;font-size:1.02rem;font-weight:700;
+    cursor:pointer;background:linear-gradient(90deg,var(--accent2),var(--accent));color:#0e1116;margin-top:4px}
+  .btn:active{transform:scale(.99)}
+  .out{margin-top:14px;display:none}
+  .out.show{display:block}
+  .out textarea{min-height:210px;font-size:.85rem;line-height:1.5}
+  .copied{color:var(--gold);font-weight:700;text-align:center;margin-top:10px;display:none}
+  .copied.show{display:block}
+  .foot{color:var(--faint);font-size:.82rem;text-align:center;margin-top:20px}
+  .step{color:var(--muted);font-size:.9rem}
+</style>
+</head>
+<body>
+
+  <h1>💪 Let's build your workout plan</h1>
+  <p class="sub">A friend's setting you up with a custom gym routine. Answer these (takes ~2 min), tap <b style="color:var(--text)">Copy my answers</b> at the bottom, and send the text back to them. That's it.</p>
+
+  <div class="card">
+    <p class="q"><span class="num">1</span>What should I call you?</p>
+    <input type="text" id="name" placeholder="Your name">
+  </div>
+
+  <div class="card">
+    <p class="q"><span class="num">2</span>What do you want out of the gym?</p>
+    <p class="hint">Pick all that apply — a combo is totally normal.</p>
+    <div class="opts" data-group="goals" data-multi="1">
+      <label class="opt"><input type="checkbox" value="Build strength/muscle"> Build strength &amp; muscle</label>
+      <label class="opt"><input type="checkbox" value="Lose weight / get lean"> Lose weight / get lean</label>
+      <label class="opt"><input type="checkbox" value="Energy &amp; mental health"> More energy &amp; better mood</label>
+      <label class="opt"><input type="checkbox" value="General fitness"> General fitness / feel healthy</label>
+    </div>
+  </div>
+
+  <div class="card">
+    <p class="q"><span class="num">3</span>Realistically, how many days a week can you train?</p>
+    <div class="opts" data-group="days">
+      <label class="opt"><input type="radio" name="days" value="2 days"> 2 days</label>
+      <label class="opt"><input type="radio" name="days" value="3 days"> 3 days</label>
+      <label class="opt"><input type="radio" name="days" value="4 days"> 4 days</label>
+      <label class="opt"><input type="radio" name="days" value="5+ days"> 5+ days</label>
+    </div>
+  </div>
+
+  <div class="card">
+    <p class="q"><span class="num">4</span>Which days/times are you free — and any regular commitments?</p>
+    <p class="hint">e.g. "free most evenings except Tuesday soccer and Thursday game night; Saturday mornings open."</p>
+    <textarea id="schedule" placeholder="Your typical week..."></textarea>
+  </div>
+
+  <div class="card">
+    <p class="q"><span class="num">5</span>Where are you starting from?</p>
+    <div class="opts" data-group="experience">
+      <label class="opt"><input type="radio" name="exp" value="Total beginner"> Total beginner — new to this</label>
+      <label class="opt"><input type="radio" name="exp" value="Returning after a break"> Returning after a break</label>
+      <label class="opt"><input type="radio" name="exp" value="Some experience"> Some experience, know the basics</label>
+      <label class="opt"><input type="radio" name="exp" value="Experienced"> Experienced lifter</label>
+    </div>
+  </div>
+
+  <div class="card">
+    <p class="q"><span class="num">6</span>What will you be working out with?</p>
+    <p class="hint" style="margin:0 0 6px">First — which gym? Name the chain or gym (e.g. LA Fitness, Planet Fitness, Crunch, or a local gym). This matters a lot: different gyms have very different equipment.</p>
+    <input type="text" id="gymname" placeholder="Your gym's name" style="margin-bottom:14px">
+    <p class="hint" style="margin:0 0 8px">And how would you describe it overall?</p>
+    <div class="opts" data-group="equipment">
+      <label class="opt"><input type="radio" name="equip" value="Full commercial gym"> Full commercial gym (machines + free weights)</label>
+      <label class="opt"><input type="radio" name="equip" value="Smaller gym (some machines + free weights)"> Smaller gym — some machines &amp; weights</label>
+      <label class="opt"><input type="radio" name="equip" value="Dumbbells / home basics"> Dumbbells / home basics</label>
+      <label class="opt"><input type="radio" name="equip" value="Bodyweight only"> Bodyweight only</label>
+    </div>
+    <p class="hint" style="margin:12px 0 6px">Anything notable it has or is missing? (e.g. "has a pool and squat rack, no cable machine")</p>
+    <input type="text" id="equipnotes" placeholder="Optional — equipment details">
+  </div>
+
+  <div class="card">
+    <p class="q"><span class="num">7</span>Any injuries, aches, or movements to avoid?</p>
+    <p class="hint">Important for keeping you safe — be honest here. "None" is a fine answer.</p>
+    <textarea id="injuries" placeholder="e.g. bad left knee, tweaky lower back, none..."></textarea>
+  </div>
+
+  <div class="card">
+    <p class="q"><span class="num">8</span>Do you have access to a pool?</p>
+    <div class="opts" data-group="pool">
+      <label class="opt"><input type="radio" name="pool" value="Yes"> Yes</label>
+      <label class="opt"><input type="radio" name="pool" value="No"> No</label>
+    </div>
+  </div>
+
+  <div class="card">
+    <p class="q"><span class="num">9</span>Any specific look or goal in mind? <span style="color:var(--faint);font-weight:400">(optional)</span></p>
+    <p class="hint">e.g. "want to look like I lift but still enjoy food", "run a 5K", "stronger for hiking".</p>
+    <textarea id="goalnote" placeholder="Optional..."></textarea>
+  </div>
+
+  <div class="card">
+    <p class="q"><span class="num">10</span>Anything else I should know? <span style="color:var(--faint);font-weight:400">(optional)</span></p>
+    <textarea id="notes" placeholder="Optional — anything at all..."></textarea>
+  </div>
+
+  <button class="btn" id="copybtn">📋 Copy my answers</button>
+  <div class="copied" id="copied">✅ Copied! Now paste it into a message back to your friend.</div>
+
+  <div class="out" id="out">
+    <p class="step">If the copy didn't work, just select all the text below and copy it manually:</p>
+    <textarea id="summary" readonly></textarea>
+  </div>
+
+  <p class="foot">Your answers stay on your device until you send them. Nothing is submitted anywhere. 🔒</p>
+
+<script>
+  // Highlight selected options
+  document.querySelectorAll('.opt').forEach(opt=>{
+    const input = opt.querySelector('input');
+    const sync = ()=>{
+      if(input.type === 'radio'){
+        document.querySelectorAll('input[name="'+input.name+'"]').forEach(r=>{
+          r.closest('.opt').classList.toggle('sel', r.checked);
+        });
+      } else {
+        opt.classList.toggle('sel', input.checked);
+      }
+    };
+    input.addEventListener('change', sync);
+  });
+
+  function getRadio(name){
+    const el = document.querySelector('input[name="'+name+'"]:checked');
+    return el ? el.value : '(not answered)';
+  }
+  function getChecks(group){
+    const els = document.querySelectorAll('[data-group="'+group+'"] input:checked');
+    return els.length ? Array.from(els).map(e=>e.value.replace('&amp;','&')).join(', ') : '(not answered)';
+  }
+  function getText(id){
+    const v = document.getElementById(id).value.trim();
+    return v ? v : '(blank)';
+  }
+
+  function buildSummary(){
+    return [
+      "=== WORKOUT PLAN INTAKE ===",
+      "",
+      "Name: " + getText('name'),
+      "Goals: " + getChecks('goals'),
+      "Days per week: " + getRadio('days'),
+      "Free days & commitments: " + getText('schedule'),
+      "Experience: " + getRadio('exp'),
+      "Gym: " + getText('gymname'),
+      "Equipment type: " + getRadio('equip'),
+      "Equipment notes: " + getText('equipnotes'),
+      "Injuries / limitations: " + getText('injuries'),
+      "Pool access: " + getRadio('pool'),
+      "Look / goal: " + getText('goalnote'),
+      "Other notes: " + getText('notes')
+    ].join("\n");
+  }
+
+  document.getElementById('copybtn').addEventListener('click', ()=>{
+    const text = buildSummary();
+    const summary = document.getElementById('summary');
+    summary.value = text;
+    document.getElementById('out').classList.add('show');
+
+    let ok = false;
+    try {
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text);
+        ok = true;
+      }
+    } catch(e){}
+    if(!ok){
+      try { summary.select(); document.execCommand('copy'); ok = true; } catch(e){}
+    }
+    document.getElementById('copied').classList.toggle('show', ok);
+    document.getElementById('out').scrollIntoView({behavior:'smooth', block:'center'});
+  });
+</script>
+</body>
+</html>

@@ -25,12 +25,57 @@ end $$;
 set role authenticated;
 set session "test.uid" = '11111111-1111-1111-1111-111111111111';
 
+-- The expected template library, by slug. Asserting the exact set rather than a
+-- count means adding a template forces an update here, which is the point: a
+-- test that says "6 or more" would never notice one going missing.
 do $$
-declare n int;
+declare
+  expected text[] := array[
+    'full-body-pool',
+    'upper-lower-no-barbell',
+    'bodyweight-anywhere',
+    'fat-loss-full-body',
+    'push-pull-legs-muscle',
+    'bowl-rotation-asian-latin'
+  ];
+  seen text[];
+  missing text[];
+  extra text[];
 begin
-  select count(*) into n from plans where is_template;
-  if n <> 3 then raise exception 'FAIL: expected 3 templates, saw %', n; end if;
-  raise notice 'PASS: templates readable (%)', n;
+  select array_agg(slug order by slug) into seen from plans where is_template;
+  select array_agg(x) into missing from unnest(expected) x
+   where x <> all(coalesce(seen, array[]::text[]));
+  select array_agg(x) into extra from unnest(coalesce(seen, array[]::text[])) x
+   where x <> all(expected);
+
+  if missing is not null then
+    raise exception 'FAIL: templates missing: %', missing;
+  end if;
+  if extra is not null then
+    raise exception 'FAIL: unexpected templates: %', extra;
+  end if;
+  raise notice 'PASS: template library is exactly the expected % entries',
+    array_length(expected, 1);
+end $$;
+
+-- Every gym template must have days and exercises. A template that clones into
+-- an empty plan is worse than no template at all.
+do $$
+declare r record;
+begin
+  for r in select p.id, p.slug from plans p where p.is_template and p.kind = 'gym' loop
+    if (select count(*) from days d where d.plan_id = r.id) < 3 then
+      raise exception 'FAIL: template % has fewer than 3 days', r.slug;
+    end if;
+    if (select count(*) from exercises e
+         join days d on d.id = e.day_id where d.plan_id = r.id) < 12 then
+      raise exception 'FAIL: template % has too few exercises', r.slug;
+    end if;
+    if exists (select 1 from days d where d.plan_id = r.id and d.est_minutes is null) then
+      raise exception 'FAIL: template % has a day with no duration estimate', r.slug;
+    end if;
+  end loop;
+  raise notice 'PASS: every gym template has days, exercises and estimates';
 end $$;
 
 -- A template must not be editable by a user.
@@ -173,6 +218,100 @@ begin
    where user_id = '22222222-2222-2222-2222-222222222222';
   if n <> 0 then raise exception 'FAIL: user A can see user B''s sessions'; end if;
   raise notice 'PASS: sessions are private per user';
+end $$;
+
+reset role;
+
+-- ---------------------------------------------------------------------------
+-- Account recovery (20260803000001)
+-- ---------------------------------------------------------------------------
+-- set role matters here: the superuser bypasses RLS, so the "can a user read
+-- the hashes" assertion below is meaningless without it.
+set role authenticated;
+set session "test.uid" = '11111111-1111-1111-1111-111111111111';
+
+do $$
+begin
+  perform public.set_security_answers(
+    array['What was the name of your first pet?',
+          'What street did you live on when you were ten?',
+          'What was your childhood nickname?'],
+    array['  Fluffy ', 'Oak   Lane', 'Sprout']
+  );
+  raise notice 'PASS: security answers stored';
+end $$;
+
+-- The hashes must be unreadable even to their owner. There is no select policy,
+-- so this returns zero rows rather than raising.
+do $$
+declare n int;
+begin
+  select count(*) into n from security_answers;
+  if n <> 0 then
+    raise exception 'FAIL: a user could read % security answer rows', n;
+  end if;
+  raise notice 'PASS: security answers are not readable by anyone';
+end $$;
+
+-- Answers must be stored hashed, never in the clear.
+reset role;
+do $$
+declare n int;
+begin
+  select count(*) into n from security_answers where answer_hash ilike '%fluffy%';
+  if n <> 0 then raise exception 'FAIL: an answer was stored in plaintext'; end if;
+  select count(*) into n from security_answers where answer_hash like '$2%';
+  if n <> 3 then raise exception 'FAIL: expected 3 bcrypt hashes, saw %', n; end if;
+  raise notice 'PASS: answers are bcrypt hashed';
+end $$;
+
+-- Verification: normalisation must make case and spacing irrelevant, and a
+-- wrong answer must fail.
+do $$
+declare n int;
+begin
+  select count(*) into n from public.verify_recovery_answers(
+    'sean@example.com', array['FLUFFY', 'oak lane', '  sprout  ']);
+  if n <> 1 then raise exception 'FAIL: correct answers did not verify (got % rows)', n; end if;
+  raise notice 'PASS: answers verify, case- and space-insensitively';
+
+  select count(*) into n from public.verify_recovery_answers(
+    'sean@example.com', array['Fluffy', 'oak lane', 'wrong']);
+  if n <> 0 then raise exception 'FAIL: a wrong answer still verified'; end if;
+  raise notice 'PASS: a wrong answer fails';
+
+  select count(*) into n from public.verify_recovery_answers(
+    'nobody@example.com', array['a', 'b', 'c']);
+  if n <> 0 then raise exception 'FAIL: unknown email returned rows'; end if;
+  raise notice 'PASS: unknown email is indistinguishable from a wrong answer';
+end $$;
+
+-- Rate limit. Counting exact prior attempts here would be brittle — the limit
+-- is per email, so the unknown-email probe above doesn't count against this
+-- one. Loop instead and assert it trips within a bounded number of tries.
+do $$
+declare
+  n int;
+  tries int := 0;
+  v_raised boolean := false;
+begin
+  while tries < 12 and not v_raised loop
+    tries := tries + 1;
+    begin
+      select count(*) into n from public.verify_recovery_answers(
+        'sean@example.com', array['FLUFFY', 'oak lane', 'sprout']);
+    exception when others then
+      v_raised := true;
+    end;
+  end loop;
+
+  if not v_raised then
+    raise exception 'FAIL: rate limit never triggered in % attempts', tries;
+  end if;
+  if tries > 6 then
+    raise exception 'FAIL: rate limit took % attempts, expected 5 an hour', tries;
+  end if;
+  raise notice 'PASS: recovery is rate limited (tripped on attempt %)', tries;
 end $$;
 
 reset role;

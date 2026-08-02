@@ -36,6 +36,12 @@ principles are constraints on decisions, not decisions themselves).
 | [0009](0009-never-miss-twice-median-gap.md) | "Never miss twice" uses the user's own median gap | Accepted |
 | [0010](0010-home-is-a-summary.md) | Home is a summary; the day is suggested, not scheduled | Accepted |
 | [0011](0011-bottom-nav-plus-account-drawer.md) | Bottom nav for destinations, drawer for account | Accepted |
+| [0012](0012-security-questions-as-interim-recovery.md) | Security questions as interim password recovery | Accepted — **delete when email lands** |
+| [0013](0013-repair-the-seed-generator.md) | The seed generator holds its own data | Accepted |
+
+0012 carries an explicit expiry — it describes something built to be removed,
+and the ADR says what removing it involves. If you're reading it after
+transactional email exists, that removal is overdue.
 
 ADRs 0001–0009 were written on 2 Aug 2026, after the fact, from
 `STATEOFPLAY.md` and `docs/V2-CODE-CHANGES.md`. The decisions are real and are

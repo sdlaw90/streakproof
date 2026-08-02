@@ -28,6 +28,38 @@ Every version below is a git tag (`v0.1.0`). Compare links at the bottom.
 
 ### Added
 
+- **Signup asks for a name, email, password and confirmation**, validated in the
+  browser and again in the server action. The rules live in `lib/validate.ts` so
+  the two can't drift; the server copy is the one that holds, because a server
+  action is a public endpoint. Minimum password length is 8, up from Supabase's
+  floor of 6.
+- **Account recovery — password hint and security questions.** Optional and
+  skippable, offered once after signup and reachable later from the drawer.
+  Answers are bcrypt hashed in Postgres, `security_answers` has **no select
+  policy** so nobody can read them back, verification is rate limited to five
+  attempts per email per hour, and wrong answers are indistinguishable from an
+  unknown account. This is an interim measure to be deleted once transactional
+  email exists — [ADR 0012](docs/decisions/0012-security-questions-as-interim-recovery.md)
+  says how.
+- **`/recovery` and `/recovery/reset`**, plus a "Forgotten your password?" link
+  on sign-in.
+- **Three more starting plans, five in total** — `bodyweight-anywhere` (no
+  equipment), `fat-loss-full-body` (three days, conditioning finishers) and
+  `push-pull-legs-muscle` (hypertrophy, full gym). The picker now orders by how
+  demanding a plan is rather than by name, and labels each with who it's for.
+- **`/build` — the custom-build questionnaire.** Twelve questions writing to
+  `builder_profiles`, reachable from "Would you rather custom build your workout
+  routine?" on the setup page. Adapted from the intake used by hand to build the
+  original templates: the name question is gone (the profile has it) and
+  "how long have you got per session?" is new, because the app displays duration
+  estimates and had no idea what the user's budget was.
+- **`gen_seed.py --only <slugs>`**, which is what makes a delta template
+  migration possible now that the original is applied and immutable.
+- Nineteen new assertions in `npm test` (46 total) covering signup and recovery
+  validation, answer normalisation and the intake; and ten more in the SQL
+  harness (22 total) covering the template library, hashing, unreadability and
+  the rate limiter.
+
 - **A home screen.** `/` is now a summary: the date, a greeting, the "never miss
   twice" nudge when it applies, today's suggested session, the food plan's
   state, and three headline stats. It used to render the set logger directly —
@@ -68,10 +100,31 @@ Every version below is a git tag (`v0.1.0`). Compare links at the bottom.
 
 ### Fixed
 
+- **`npm run seed:gen` had been broken for a month.** It imported the v1
+  generator at `supabase/gen_seed.py`, which was deleted as a "v1 leftover" in
+  `628d992` — except it held the exercise text for both gym templates. Nothing
+  noticed because nothing re-ran the generator. The data is now inlined and the
+  cross-file import is gone; regenerating produces the two original templates
+  byte-identically to what is applied in production. See
+  [ADR 0013](docs/decisions/0013-repair-the-seed-generator.md).
+- **The SQL harness asserted a template count, not a template set.** It now
+  asserts the exact expected slugs, plus that every gym template has days,
+  exercises and duration estimates — a count would let one silently vanish.
 - **The drawer's scrim left the bottom nav undimmed and clickable.** Both were
   `z-40`, and at equal z-index DOM order wins — `BottomNav` renders after
   `<main>`. Scrim is now `z-50` and the panel `z-[60]`. Caught by driving the
   deployed app, not by reading the code.
+
+### Database
+
+Two migrations, **neither applied to production yet** — both need
+`npm run db:push`:
+
+- `20260803000001_account_recovery.sql`
+- `20260803000002_more_templates.sql`
+
+Both were applied in order against stock Postgres 16 with the RLS harness
+passing before being committed. See [docs/MIGRATIONS.md](docs/MIGRATIONS.md).
 
 ---
 
