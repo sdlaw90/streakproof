@@ -21,7 +21,9 @@ function toSetLogs(rows: RawSet[]): SetLog[] {
 export default async function Home({
   searchParams,
 }: {
-  searchParams?: { date?: string };
+  // Async since Next 15 — a page can start rendering before the request's
+  // search params are known.
+  searchParams?: Promise<{ date?: string }>;
 }) {
   const ctx = await loadPlan("gym");
   if (ctx.redirect) redirect(ctx.redirect);
@@ -30,7 +32,8 @@ export default async function Home({
 
   // ?date=YYYY-MM-DD fills in a session you forgot to log. Defaults to the
   // user's local today.
-  const activeDate = sanitizeLogDate(searchParams?.date, today);
+  const params = await searchParams;
+  const activeDate = sanitizeLogDate(params?.date, today);
 
   const dayIds = days.map((d) => d.id);
   const { sessions, sets } = await loadSessionsAndSets(userId, dayIds);

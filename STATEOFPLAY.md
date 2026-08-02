@@ -139,11 +139,53 @@ environment variables, build cache, and the app's own dependency graph.
   it deliberately skips `router.refresh()`, which would otherwise overwrite the
   inputs with the server's unchanged values and destroy what was just typed.
 
+**Dependency upgrade, 2 Aug 2026**
+
+The whole stack went to current, alongside the same exercise on Squirrelingo.
+
+| | From | To |
+|---|---|---|
+| Next.js | 14.2.35 | 16.2.12 (Turbopack is now the default builder) |
+| React / React DOM | 18.3.1 | 19.2.8 |
+| Tailwind | 3.4 | 4.3 |
+| `@supabase/ssr` | 0.5.2 | 0.12.4 |
+| `@supabase/supabase-js` | 2.45.4 | 2.111.0 |
+| Supabase CLI | 2.2.1 | 2.111.0 |
+| TypeScript | ^5 | 5.9.3 |
+| `@types/node` | ^20 | ^22 (pinned to the runtime, not to `latest`) |
+
+What that required:
+
+- **`cookies()` is async** since Next 15. `createClient()` in
+  `lib/supabase/server.ts` is now async and all eleven call sites await it.
+  `userToday()`'s parameter type became `Awaited<ReturnType<typeof createClient>>`.
+- **`searchParams` is async.** `app/page.tsx` and `app/setup/page.tsx` await it.
+- **`middleware.ts` → `proxy.ts`.** Next 16 renamed the file convention and the
+  exported function; `config.matcher` is unchanged. Done with
+  `npx @next/codemod@canary middleware-to-proxy .`.
+- **Tailwind 4 is CSS-first.** `tailwind.config.ts` is gone; the eleven colour
+  tokens are `--color-*` entries in an `@theme` block in `app/globals.css`. The
+  PostCSS plugin moved to `@tailwindcss/postcss` and autoprefixer was dropped.
+  `bg-gradient-to-r` → `bg-linear-to-r`.
+- **`next lint` was removed** in Next 16, so the `lint` script is gone. There was
+  no ESLint config in the repo anyway.
+
+Verified: `npx tsc --noEmit` clean, `next build` clean with no deprecation
+warnings, `npm test` 16/16, and a headless screenshot of `/login` before and
+after. The rendered page is materially identical — page background is
+pixel-identical `#0e1116`, all eleven tokens appear in the emitted CSS, and the
+gradient endpoints differ by 1–2/255 because Tailwind 4 interpolates gradients
+in oklab. The remaining ~5% pixel difference is a small vertical shift from
+preflight's font-size defaults.
+
+`npm audit` went from 21 advisories to 3, and all three are inside Next's own
+vendored `postcss` and `sharp`. `npm audit fix --force` "resolves" them by
+installing Next 9.3.3, so they stay until Next ships a patch.
+
 **Not started**
 
 | | Why it matters |
 |---|---|
-| **Next 16 upgrade** | 14.2.35 carries 21 advisories. Fine for two private users, not fine public. Breaking: `cookies()`, `params`, `searchParams` became async — touches `lib/supabase/server.ts`, `app/page.tsx`, `app/setup/page.tsx`. ~30 min. **Parked** pending a look at Squirrelingo, which Sean believes is on the same Next version; if so it's one decision across both apps. |
 | **Review triggers** | Time / stalled / adherence / season checks writing to `plan_reviews`. Smallest remaining piece and it's the loop that makes the AI builder worth having. |
 | **Food UI** | Schema and template exist; no screens. Makes the app daily rather than 3×/week. |
 | **AI builder** | The differentiator. Design agreed (below). |

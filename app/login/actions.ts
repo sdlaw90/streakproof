@@ -8,7 +8,7 @@ export async function login(_prev: unknown, formData: FormData) {
   const email = String(formData.get("email") || "").trim();
   const password = String(formData.get("password") || "");
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) return { error: error.message };
@@ -26,7 +26,7 @@ export async function signup(_prev: unknown, formData: FormData) {
     return { error: "Password must be at least 6 characters." };
   }
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp({
     email,
     password,

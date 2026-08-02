@@ -316,7 +316,7 @@ export default function Tracker({
         <div className="mb-1 flex items-center gap-3">
           <div className="h-2.5 flex-1 overflow-hidden rounded-full border border-line bg-panel2">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-accent2 to-accent transition-all"
+              className="h-full rounded-full bg-linear-to-r from-accent2 to-accent transition-all"
               style={{ width: (totalSets ? (doneSets / totalSets) * 100 : 0) + "%" }}
             />
           </div>

@@ -16,7 +16,7 @@ export async function chooseTemplate(formData: FormData) {
   const templateId = String(formData.get("template_id") || "");
   if (!templateId) return;
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();

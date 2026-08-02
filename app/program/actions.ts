@@ -21,7 +21,7 @@ function fail(message: string | undefined, fallback: string): EditResult {
 }
 
 async function client() {
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();

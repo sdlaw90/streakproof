@@ -1,8 +1,14 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
-export function createClient() {
-  const cookieStore = cookies();
+/**
+ * Server-side Supabase client.
+ *
+ * `cookies()` became async in Next 15, so this is async too and every caller
+ * awaits it. Nothing else about the shape changed.
+ */
+export async function createClient() {
+  const cookieStore = await cookies();
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

@@ -47,7 +47,7 @@ type ProfileRow = {
  * without competing with the gym side for the same column.
  */
 export async function loadPlan(kind: PlanKind = "gym"): Promise<PlanContext> {
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -102,7 +102,7 @@ export async function loadSessionsAndSets(
   userId: string,
   dayIds: string[]
 ): Promise<{ sessions: RawSession[]; sets: RawSet[] }> {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const { data: sessions } = await supabase
     .from("sessions")

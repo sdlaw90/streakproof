@@ -6,8 +6,8 @@ A private tracker for two people (you + Ely). Each person signs in, picks a
 starting plan, gets their own editable copy, and logs every set. Everything
 persists and syncs across devices.
 
-**Stack:** Next.js 14 (App Router) · Supabase (Postgres + Auth) · Tailwind ·
-deploys on Vercel. Everything fits the free tiers.
+**Stack:** Next.js 16 (App Router, Turbopack) · React 19 · Supabase (Postgres +
+Auth) · Tailwind 4 · deploys on Vercel. Everything fits the free tiers.
 
 ---
 
@@ -45,7 +45,7 @@ side for a single slot.
 
 # PART 1 — One-time setup (do this once, on a computer)
 
-You'll need [Node.js](https://nodejs.org) 18+ (22.6+ if you want `npm test`),
+You'll need [Node.js](https://nodejs.org) 20.9+ (22.6+ if you want `npm test`),
 plus GitHub, Vercel, and Supabase accounts.
 
 ## Step 1 — Create the Supabase project
@@ -252,8 +252,9 @@ boundary — see `docs/V2-CODE-CHANGES.md`.
   self-healing from the browser on first load. This was a real v1 bug: UTC dates
   filed a 9pm Eastern workout under tomorrow and corrupted streaks, "last time",
   and PR detection.
-- `middleware.ts` must use a **relative** import for `./lib/supabase/middleware`,
-  not the `@/` alias — Vercel bundles Edge middleware separately and the alias
-  fails there while compiling fine locally.
-- Next 14.2.35 carries known advisories. Fine for two private users; upgrade
-  before this goes public.
+- The Edge entry point is `proxy.ts` — Next 16 renamed the `middleware` file
+  convention. It must use a **relative** import for `./lib/supabase/middleware`,
+  not the `@/` alias: Vercel bundles it separately from the app build and the
+  alias fails there while compiling fine locally.
+- Tailwind 4 is CSS-first. There is no `tailwind.config.ts` — the colour tokens
+  live in the `@theme` block at the top of `app/globals.css`.

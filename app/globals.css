@@ -1,15 +1,40 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/*
+ * Tailwind 4 is CSS-first: one import replaces the three @tailwind directives,
+ * and the design tokens live in @theme here instead of tailwind.config.ts
+ * (which is gone). Every `--color-*` entry generates the matching utilities —
+ * `--color-panel2` gives you bg-panel2, text-panel2, border-panel2, and the
+ * opacity modifiers like bg-accent/10.
+ */
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #0e1116;
+  --color-panel: #171c24;
+  --color-panel2: #1e2530;
+  --color-line: #2a323f;
+  --color-ink: #e8edf4;
+  --color-muted: #93a1b5;
+  --color-faint: #6b7889;
+  --color-accent: #4fd08a;
+  --color-accent2: #3aa6ff;
+  --color-hot: #ff7a59;
+  --color-gold: #ffcf5c;
+}
+
+/*
+ * Tailwind 4 defaults `border-*` to currentColor rather than gray-200. Every
+ * bordered element in this app names its own colour (`border border-line`), so
+ * nothing relies on the old default — but keep that in mind when adding new
+ * markup: a bare `border` will now inherit the text colour.
+ */
 
 html, body {
   background:
-    radial-gradient(1200px 600px at 50% -10%, #16202c 0%, #0e1116 55%);
-  color: #e8edf4;
+    radial-gradient(1200px 600px at 50% -10%, #16202c 0%, var(--color-bg) 55%);
+  color: var(--color-ink);
   -webkit-font-smoothing: antialiased;
 }
 
 * { -webkit-tap-highlight-color: transparent; }
 
-/* Remove number input spinners for a cleaner look */
 input[type="text"]:focus, textarea:focus { outline: none; }

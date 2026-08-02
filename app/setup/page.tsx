@@ -8,9 +8,11 @@ export const dynamic = "force-dynamic";
 export default async function SetupPage({
   searchParams,
 }: {
-  searchParams?: { error?: string };
+  // Async since Next 15.
+  searchParams?: Promise<{ error?: string }>;
 }) {
-  const supabase = createClient();
+  const params = await searchParams;
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -31,9 +33,9 @@ export default async function SetupPage({
         with anyone else.
       </p>
 
-      {searchParams?.error && (
+      {params?.error && (
         <p className="mb-4 rounded-xl border border-hot/40 bg-hot/10 px-3 py-2 text-sm text-hot">
-          {searchParams.error}
+          {params.error}
         </p>
       )}
 

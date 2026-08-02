@@ -2,7 +2,8 @@
 
 Workouts and meal prep for ADHD brains. Miss a day — the plan survives.
 
-Next.js 14 (App Router) · Supabase (Postgres + Auth) · Tailwind · Vercel.
+Next.js 16 (App Router, Turbopack) · React 19 · Supabase (Postgres + Auth) ·
+Tailwind 4 · Vercel. Node 20.9+.
 Private for now (Sean + one friend), built to public standards so it can open up
 later without a rewrite.
 
@@ -106,9 +107,13 @@ PR detection. Client-supplied dates go through `sanitizeLogDate()`.
 
 ### Code
 
-- `middleware.ts` must use **relative imports**, not the `@/` alias. Vercel
-  bundles Edge middleware separately and the alias fails there while compiling
-  fine locally.
+- The Edge entry point is **`proxy.ts`** (Next 16 renamed the `middleware` file
+  convention; same matcher, exported function is `proxy`). It must use
+  **relative imports**, not the `@/` alias — Vercel bundles it separately from
+  the app build and the alias fails there while compiling fine locally.
+- Server helpers that touch `cookies()` are **async** (Next 15+), so
+  `createClient()` in `lib/supabase/server.ts` returns a promise and every call
+  site awaits it. Same for a page's `searchParams`.
 - Server actions return `{ ok, error }` and callers surface failures. Never
   swallow a write error — the app is used on bad gym wifi. When surfacing a
   failure, don't `router.refresh()` — that replaces the inputs with the server's
@@ -142,11 +147,16 @@ PR detection. Client-supplied dates go through `sanitizeLogDate()`.
 
 ### Design language
 
-Dark, mobile-first, minimal chrome. Tokens live in `tailwind.config.ts`:
+Dark, mobile-first, minimal chrome. Tailwind 4 is CSS-first: there is no
+`tailwind.config.ts`. Tokens live in the `@theme` block of `app/globals.css`
+as `--color-*` custom properties:
 `bg #0e1116`, `panel #171c24`, `panel2 #1e2530`, `line #2a323f`, `ink #e8edf4`,
 `muted #93a1b5`, `faint #6b7889`, `accent #4fd08a`, `accent2 #3aa6ff`,
 `hot #ff7a59`, `gold #ffcf5c`. Rounded cards, gradient progress bars,
 tap-to-check.
+
+Tailwind 4 notes: `border-*` defaults to `currentColor`, not gray-200 — always
+name a border colour. Gradients are `bg-linear-to-r`, not `bg-gradient-to-r`.
 
 ---
 

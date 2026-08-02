@@ -8,7 +8,7 @@ import { sanitizeLogDate, todayIn } from "@/lib/dates";
  * Eastern time got filed under tomorrow's date.
  */
 async function userToday(
-  supabase: ReturnType<typeof createClient>,
+  supabase: Awaited<ReturnType<typeof createClient>>,
   userId: string
 ) {
   const { data } = await supabase
@@ -20,7 +20,7 @@ async function userToday(
 }
 
 async function ensureSession(dayId: string, performedOn?: string) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -93,7 +93,7 @@ export async function deleteSet(input: {
   setNumber: number;
   performedOn?: string;
 }): Promise<SaveResult> {
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -127,7 +127,7 @@ export async function saveTimezone(timezone: string): Promise<SaveResult> {
   if (!/^[A-Za-z_+\-/]{3,64}$/.test(timezone)) {
     return { ok: false, error: "Invalid timezone" };
   }
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
