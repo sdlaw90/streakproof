@@ -117,6 +117,17 @@ Every version below is a git tag (`v0.1.0`). Compare links at the bottom.
 
 ### Fixed
 
+- **Recovery hashing failed in production with `function gen_salt(unknown,
+  integer) does not exist`.** Supabase installs pgcrypto into an `extensions`
+  schema, not `public`, so `create extension if not exists pgcrypto` was a
+  no-op and `set search_path = public` on the recovery functions couldn't
+  resolve `crypt()`, `gen_salt()` or `gen_random_bytes()`. The search path now
+  includes `extensions`, which stays correct on a stock Postgres too, since a
+  missing schema in `search_path` is ignored.
+- **The SQL harness installed pgcrypto into `public`**, so every assertion
+  passed against a schema layout production doesn't have. The stub now creates
+  it in `extensions` exactly as Supabase does — with that change the harness
+  reproduces the production failure, which is the only reason to trust it now.
 - **An unreadable profile sent you to the template picker instead of sign-in.**
   `loadPlan()` discarded the error from the profile query, so a failed read and
   a user with no plan were indistinguishable — both produced a null plan id and

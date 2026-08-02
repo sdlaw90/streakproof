@@ -39,6 +39,7 @@ Needs `npm run db:push`.
 
 | Migration | Ships in | What it does |
 |---|---|---|
+| `20260803000005_fix_pgcrypto_search_path.sql` | Unreleased | Recreates `set_security_answers()` and `verify_recovery_answers()` with `extensions` on the search path. Without it both raise `function gen_salt(unknown, integer) does not exist` on Supabase. |
 | `20260803000004_recovery_tokens.sql` | Unreleased | `recovery_tokens` (no policies — security-definer access only); `verify_recovery_answers` dropped and recreated to mint a single-use 10-minute token; new `redeem_recovery_token()`. Splits the reset into "prove who you are" and "choose a password". |
 
 ## Applied (continued)
@@ -74,10 +75,15 @@ the bucket config and the folder isolation.
    > outside `migrations/` on purpose. Never run it against Supabase — it would
    > shadow the real auth schema.
 
-   Mirror production in the stub. It once granted table privileges to
-   `authenticated` but not `anon`, so anon failed with "permission denied"
-   instead of the empty result a real project returns — which is exactly what
-   hid the bug `20260802000005` fixed.
+   **Mirror production in the stub.** It has now hidden two real bugs by not
+   doing so: once by granting table privileges to `authenticated` but not
+   `anon`, so anon failed with "permission denied" instead of the empty result a
+   real project returns (`20260802000005`); and once by installing pgcrypto into
+   `public` when Supabase installs it into `extensions`, so
+   `set search_path = public` passed every local assertion and raised
+   `function gen_salt(unknown, integer) does not exist` in production
+   (`20260803000005`). A harness that doesn't match production doesn't fail —
+   it lies.
 
 4. `npm run db:push`, then `npm run verify:db`.
 5. Add a row to the table above and a `### Database` note in `CHANGELOG.md`.

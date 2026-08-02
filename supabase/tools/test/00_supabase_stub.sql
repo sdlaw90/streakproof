@@ -7,6 +7,18 @@
 --  live project.
 -- ============================================================================
 
+-- ---------------------------------------------------------------------------
+-- Extensions.
+--
+-- Supabase installs pgcrypto into an `extensions` schema, NOT public. Creating
+-- it in public here would be a harness that doesn't mirror production — and it
+-- was: `set search_path = public` on the recovery functions passed every local
+-- assertion and then failed in production with "function gen_salt(unknown,
+-- integer) does not exist". Mirror production, or the harness lies.
+-- ---------------------------------------------------------------------------
+create schema if not exists extensions;
+create extension if not exists pgcrypto with schema extensions;
+
 create schema if not exists auth;
 
 create table if not exists auth.users (
@@ -71,6 +83,7 @@ grant usage on schema public to authenticated, anon;
 -- from inside a security-invoker function running as `authenticated`.
 grant usage on schema auth to authenticated, anon;
 grant usage on schema storage to authenticated, anon;
+grant usage on schema extensions to authenticated, anon;
 grant execute on function auth.uid() to authenticated, anon;
 grant execute on function storage.foldername(text) to authenticated, anon;
 grant select, insert, update, delete on storage.objects to authenticated;
