@@ -34,9 +34,9 @@ const ACCOUNT_ITEMS: Item[] = [
 ];
 
 const PLAN_ITEMS: Item[] = [
-  { label: "Edit your plan", hint: "Days, exercises, timing", icon: "⚙️", href: "/program" },
+  { label: "Edit your gym plan", hint: "Days, exercises, timing", icon: "⚙️", href: "/program" },
+  { label: "Edit your food plan", hint: "Bowls, pantry, prep days", icon: "🍳", href: "/food/edit" },
   { label: "Switch plan", hint: "Start from a different template", icon: "🔁", href: "/setup" },
-  { label: "Food plan", hint: "Builds, prep days, fallbacks", icon: "🥗", href: "/food" },
 ];
 
 function initialOf(name: string): string {

@@ -28,6 +28,18 @@ Every version below is a git tag (`v0.1.0`). Compare links at the bottom.
 
 ### Added
 
+- **Plan reviews.** `lib/review.ts` implements the time, stalled and adherence
+  checks; home records what's due and shows one quiet card with three plain
+  options, one of them "it's fine as it is". Every threshold is deliberately
+  hard to trip — a stall needs *two* lifts flat across four sessions, adherence
+  needs four weeks of history and under 60% of planned sessions, and `season` is
+  deliberately not implemented because nothing knows when a season starts. See
+  [ADR 0015](docs/decisions/0015-review-triggers-are-quiet-by-default.md).
+- **`/food/edit`** — the food plan editor the gym side has always had. Three
+  tabs: bowls (with per-component toggles grouped by role), pantry (add, rename,
+  mark batch-cooked, delete), and prep (rename, set the weekday, edit steps).
+  Same save-on-blur, same Retry-on-failure, same no-refresh-on-error rule as the
+  program editor.
 - **The food side has screens.** `/food` shows the bowl rotation with a
   suggestion, the two fallback tiers under "Nothing prepped", what you've eaten
   today, and a free-text box for everything else. `/food/prep` is the Sunday and
@@ -209,6 +221,18 @@ users, gym side complete.
 
 ### Added
 
+- **Plan reviews.** `lib/review.ts` implements the time, stalled and adherence
+  checks; home records what's due and shows one quiet card with three plain
+  options, one of them "it's fine as it is". Every threshold is deliberately
+  hard to trip — a stall needs *two* lifts flat across four sessions, adherence
+  needs four weeks of history and under 60% of planned sessions, and `season` is
+  deliberately not implemented because nothing knows when a season starts. See
+  [ADR 0015](docs/decisions/0015-review-triggers-are-quiet-by-default.md).
+- **`/food/edit`** — the food plan editor the gym side has always had. Three
+  tabs: bowls (with per-component toggles grouped by role), pantry (add, rename,
+  mark batch-cooked, delete), and prep (rename, set the weekday, edit steps).
+  Same save-on-blur, same Retry-on-failure, same no-refresh-on-error rule as the
+  program editor.
 - **The food side has screens.** `/food` shows the bowl rotation with a
   suggestion, the two fallback tiers under "Nothing prepped", what you've eaten
   today, and a free-text box for everything else. `/food/prep` is the Sunday and

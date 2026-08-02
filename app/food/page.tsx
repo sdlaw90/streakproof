@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import BottomNav from "@/components/BottomNav";
 import FoodToday, { orderComponents, type BuildView } from "@/components/FoodToday";
@@ -91,10 +92,15 @@ export default async function FoodPage() {
   return (
     <>
       <main className="mx-auto max-w-2xl px-5 pt-5 pb-28">
-        <header className="mb-5">
-          <p className="text-sm text-faint">{longDate(today)}</p>
-          <h1 className="text-2xl font-bold tracking-tight">Food</h1>
-          <p className="mt-0.5 text-sm text-muted">{plan.name}</p>
+        <header className="mb-5 flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-sm text-faint">{longDate(today)}</p>
+            <h1 className="text-2xl font-bold tracking-tight">Food</h1>
+            <p className="mt-0.5 truncate text-sm text-muted">{plan.name}</p>
+          </div>
+          <Link href="/food/edit" className="shrink-0 pt-1 text-sm text-accent2">
+            Edit
+          </Link>
         </header>
 
         <FoodToday

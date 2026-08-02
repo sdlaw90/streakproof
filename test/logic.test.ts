@@ -3,6 +3,7 @@ import { sanitizeLogDate, todayIn, formatISODate } from "@/lib/dates";
 import { greetingFor, suggestDay, suggestBuild, prepDueOn } from "@/lib/suggest";
 import { validateSignup, validateRecovery, normalizeAnswer } from "@/lib/validate";
 import { GYM_INTAKE, missingAnswers, validateWeights, toPounds } from "@/lib/intake";
+import { dueReviews, timeReview, stalledReview, adherenceReview, type ReviewInputs } from "@/lib/review";
 
 let fails = 0;
 function check(name: string, cond: boolean, extra = "") {
@@ -185,6 +186,65 @@ check("90kg is inside the pound bounds once converted",
   validateWeights({ current: 90, unit: "kg" }) === null);
 check("kg conversion is right", Math.round(toPounds(100, "kg")) === 220);
 check("lb passes through", toPounds(180, "lb") === 180);
+
+console.log("\nplan reviews:");
+const base: ReviewInputs = {
+  today: "2026-08-02",
+  startedOn: "2026-07-01",
+  lastReviewedOn: null,
+  reviewAfterWeeks: 8,
+  workoutDates: [],
+  typicalGapDays: 3,
+  topSetsByExercise: {},
+};
+const withDates = (n: number, from = "2026-07-01") =>
+  Array.from({ length: n }, (_, i) => {
+    const d = new Date(from + "T00:00:00Z");
+    d.setUTCDate(d.getUTCDate() + i * 2);
+    return d.toISOString().slice(0, 10);
+  });
+
+check("a young plan is not due on time",
+  timeReview({ ...base, startedOn: "2026-07-01", reviewAfterWeeks: 8 }) === null);
+check("an old plan is due",
+  timeReview({ ...base, startedOn: "2026-01-01", reviewAfterWeeks: 8 })?.reason === "time");
+check("last review resets the clock",
+  timeReview({ ...base, startedOn: "2026-01-01", lastReviewedOn: "2026-07-20", reviewAfterWeeks: 8 }) === null);
+check("no start date -> no time review",
+  timeReview({ ...base, startedOn: null, lastReviewedOn: null }) === null);
+
+const flat = { name: "Squat", weights: [100, 100, 100, 100] };
+const rising = { name: "Bench", weights: [60, 62.5, 65, 67.5] };
+const falling = { name: "Row", weights: [80, 80, 75, 75] };
+
+check("one flat lift is not a stall — plateaus are normal",
+  stalledReview({ ...base, topSetsByExercise: { a: flat, b: rising } }) === null);
+check("two flat lifts is a stall",
+  stalledReview({ ...base, topSetsByExercise: { a: flat, b: falling } })?.reason === "stalled");
+check("rising lifts never stall",
+  stalledReview({ ...base, topSetsByExercise: { a: rising, b: { ...rising, name: "OHP" } } }) === null);
+check("too little history to judge a stall",
+  stalledReview({ ...base, topSetsByExercise: {
+    a: { name: "Squat", weights: [100, 100] }, b: { name: "Row", weights: [80, 80] },
+  } }) === null);
+
+check("a brand new plan is never judged on adherence",
+  adherenceReview({ ...base, startedOn: "2026-07-28", workoutDates: [] }) === null);
+check("training far less than planned fires",
+  adherenceReview({ ...base, startedOn: "2026-06-01", workoutDates: ["2026-06-10", "2026-07-15"] })
+    ?.reason === "adherence");
+check("training as planned does not fire",
+  adherenceReview({ ...base, startedOn: "2026-06-01", workoutDates: withDates(28, "2026-06-01") }) === null);
+check("training MORE than planned never fires",
+  adherenceReview({ ...base, startedOn: "2026-06-01", workoutDates: withDates(40, "2026-06-01") }) === null);
+
+check("a healthy new plan raises nothing at all",
+  dueReviews({ ...base, workoutDates: withDates(12), topSetsByExercise: { a: rising } }).length === 0);
+check("stall is listed before time",
+  dueReviews({ ...base, startedOn: "2026-01-01", topSetsByExercise: { a: flat, b: falling } })[0]
+    ?.reason === "stalled");
+check("season is never auto-raised",
+  !dueReviews({ ...base, startedOn: "2026-01-01" }).some((r) => r.reason === "season"));
 
 console.log(fails === 0 ? "\nAll stats/date checks passed.\n" : `\n${fails} FAILED\n`);
 process.exit(fails ? 1 : 0);

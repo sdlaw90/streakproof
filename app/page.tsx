@@ -7,6 +7,9 @@ import { hourIn, longDate } from "@/lib/dates";
 import { loadFoodSummary, loadPlan, loadSessionsAndSets } from "@/lib/load";
 import { computeStats } from "@/lib/stats";
 import { greetingFor, suggestBuild, suggestDay } from "@/lib/suggest";
+import { dueReviews } from "@/lib/review";
+import { recordReviews } from "@/app/review/actions";
+import ReviewCard, { type OpenReview } from "@/components/ReviewCard";
 
 export const dynamic = "force-dynamic";
 
@@ -59,6 +62,78 @@ export default async function Home() {
     : 0;
   const trainedToday = doneSessions.some((s) => s.performed_on === today);
 
+  // ---- Plan reviews -----------------------------------------------------
+  //
+  // Top set per exercise per session, oldest first — the input the stall check
+  // needs. Built from data already loaded rather than a second query.
+  const setsBySessionId = new Map<string, typeof sets>();
+  for (const st of sets) {
+    const arr = setsBySessionId.get(st.session_id) ?? [];
+    arr.push(st);
+    setsBySessionId.set(st.session_id, arr);
+  }
+
+  const exerciseNames = new Map(exercises.map((e) => [e.id, e.name]));
+  const topSetsByExercise: Record<string, { name: string; weights: number[] }> = {};
+  const sessionsOldestFirst = [...doneSessions].sort((a, b) =>
+    a.performed_on < b.performed_on ? -1 : 1
+  );
+  for (const sess of sessionsOldestFirst) {
+    const rows = setsBySessionId.get(sess.id) ?? [];
+    const bestPerExercise = new Map<string, number>();
+    for (const r of rows) {
+      if (!r.done || r.weight == null || !(r.reps ?? 0)) continue;
+      bestPerExercise.set(
+        r.exercise_id,
+        Math.max(bestPerExercise.get(r.exercise_id) ?? 0, r.weight)
+      );
+    }
+    for (const [exId, weight] of bestPerExercise) {
+      const entry = (topSetsByExercise[exId] ??= {
+        name: exerciseNames.get(exId) ?? "A lift",
+        weights: [],
+      });
+      entry.weights.push(weight);
+    }
+  }
+
+  const reviews = plan
+    ? dueReviews({
+        today,
+        startedOn: plan.started_on,
+        lastReviewedOn: plan.last_reviewed_on,
+        reviewAfterWeeks: plan.review_after_weeks,
+        workoutDates: doneSessions.map((s) => s.performed_on),
+        typicalGapDays: stats.typicalGapDays,
+        topSetsByExercise,
+      })
+    : [];
+
+  // Idempotent — the unique partial index means an already-open review is a
+  // no-op rather than a duplicate.
+  if (plan && reviews.length) {
+    await recordReviews(plan.id, reviews, today);
+  }
+
+  const { data: openRows } = await supabase
+    .from("plan_reviews")
+    .select("id, reason, detail, plan_id")
+    .eq("user_id", userId)
+    .eq("status", "pending")
+    .order("created_at", { ascending: false });
+
+  const openReviews: OpenReview[] = ((openRows ?? []) as {
+    id: string;
+    reason: string;
+    detail: { message?: string };
+    plan_id: string;
+  }[]).map((r) => ({
+    id: r.id,
+    reason: r.reason,
+    message: r.detail?.message ?? "Worth a look at this plan.",
+    planId: r.plan_id,
+  }));
+
   const greeting = greetingFor(hourIn(timezone));
   // The food side is a rotation too (A/B/C/D), with TWO floor tiers rather than
   // one: the four-minute meal and the grab-and-go shelf. Both carry
@@ -84,6 +159,12 @@ export default async function Home() {
             planName={plan?.name ?? null}
           />
         </header>
+
+        {openReviews.map((r) => (
+          <div key={r.id} className="mt-4">
+            <ReviewCard review={r} today={today} />
+          </div>
+        ))}
 
         {stats.nudge && (
           <p className="mt-4 rounded-2xl border border-gold/40 bg-gold/10 px-4 py-3 text-sm text-gold">
