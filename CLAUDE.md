@@ -15,6 +15,7 @@ later without a rewrite.
 | Working directory | `C:\Users\sean\Documents\streakproof` |
 | Repo | `github.com/sdlaw90/streakproof`, branch `main` |
 | Deployed | `https://streakproof-app.vercel.app` |
+| Vercel | team `adhd90`, project `streakproof`. **Framework Preset must be `Next.js`** — see Deployment below. |
 | Supabase ref | `qpxzyzdzunazfvgxnrfz` |
 | Shell | **Windows PowerShell** — never hand Sean bash syntax (`printf`, `export`, heredocs). Use `Set-Content -Encoding ascii` for file writes; PowerShell 5.1 defaults to UTF-16 and silently breaks `.env` files. |
 
@@ -109,7 +110,14 @@ PR detection. Client-supplied dates go through `sanitizeLogDate()`.
   bundles Edge middleware separately and the alias fails there while compiling
   fine locally.
 - Server actions return `{ ok, error }` and callers surface failures. Never
-  swallow a write error — the app is used on bad gym wifi.
+  swallow a write error — the app is used on bad gym wifi. When surfacing a
+  failure, don't `router.refresh()` — that replaces the inputs with the server's
+  unchanged values and destroys what the user just typed.
+- A client component that seeds state from props in a `useState` initializer
+  needs a `key` tied to whatever the props are keyed on. Same-route navigation
+  (`?date=…`) keeps the instance alive, so the initializer never re-runs and the
+  component silently shows stale data. `<Tracker key={activeDate}>` exists for
+  exactly this reason.
 - Pure logic (dates, stats, review triggers) goes in `lib/` as plain functions
   with no DB access, so it can be tested without a database.
 - The food side has its own tables rather than reusing the gym ones. It needs
@@ -117,6 +125,20 @@ PR detection. Client-supplied dates go through `sanitizeLogDate()`.
   items and builds. Don't merge them.
 - Calorie tracking is `plans.tracking_mode` (`none` | `protein` | `full`) — an
   overlay on the same tables. Never fork the schema for it.
+
+### Deployment
+
+- **Framework Preset must be `Next.js`** in Vercel → Settings → Build and
+  Deployment. With `Other`, Vercel never runs the Next.js builder: the build
+  still reports success and `public/` still serves, but no App Router page is
+  deployed as a function and middleware is bundled generically — which is how
+  `__dirname` ends up in an Edge bundle. Symptoms are
+  `500 MIDDLEWARE_INVOCATION_FAILED` on everything, or a bare `404` on every
+  route if middleware is out of the way. This cost an afternoon on 2 Aug 2026.
+- Changing project settings does **not** affect existing deployments — they keep
+  the config they were built with. Redeploy after any settings change.
+- When a deployed app misbehaves but `npm run build` is clean locally, check the
+  platform config before the code.
 
 ### Design language
 

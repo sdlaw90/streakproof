@@ -1,7 +1,8 @@
 # Streakproof — state of play
 
 Written 2 Aug 2026, at the point of switching to a project with direct access to
-the local folder. Everything a fresh session needs to pick this up cold.
+the local folder. Updated later the same day, after the app went live.
+Everything a fresh session needs to pick this up cold.
 
 ---
 
@@ -106,18 +107,43 @@ gap, so a weekly lifter isn't nagged on day three.
 - SQL harness — 14 assertions on RLS, cloning, and the anon boundary, run
   against real Postgres in migration order.
 - Repo on GitHub, deployed to Vercel, environment variables set.
+- **The app is live and rendering** at `streakproof-app.vercel.app`. This was
+  the open thread; see below for what it actually was.
 
-**In flight**
+**The deploy failure, resolved 2 Aug 2026**
 
-- Edge middleware build failure on Vercel (`@/` alias unresolved in the Edge
-  bundler). Fix committed — relative import — but **not yet confirmed deployed**.
-  This is the one open thread.
+Every route returned `500 MIDDLEWARE_INVOCATION_FAILED`, with
+`ReferenceError: __dirname is not defined` in the runtime logs. It looked like a
+continuation of the earlier Edge-middleware build failure. It wasn't.
+
+The cause was the **Vercel project's Framework Preset being set to `Other`
+instead of `Next.js`**. Under `Other`, Vercel never runs the Next.js builder: it
+publishes `public/` statically and bundles middleware generically — so Node
+globals like `__dirname` survive into an Edge function, and *no App Router page
+is deployed at all*. With middleware neutralised on a probe branch, every route
+returned a bare `404`.
+
+Fixed by switching the preset and redeploying. The earlier relative-import fix
+in `middleware.ts` was correct and complete; it addressed a genuinely separate
+build-time problem. Ruled out along the way, so don't re-investigate:
+environment variables, build cache, and the app's own dependency graph.
+
+**Also shipped that day** (commit `7c4b413`):
+
+- `key={activeDate}` on `<Tracker>`. Its local set state is seeded in a
+  `useState` initializer, which runs once on mount — a client-side nav to
+  `?date=…` kept the previous date's typed values on screen and wrote them to
+  the newly selected date. Backfill was quietly undoing itself.
+- `app/program/actions.ts` now returns `{ ok, error }` like every other server
+  action, and `ProgramEditor` surfaces failures with a Retry banner. On failure
+  it deliberately skips `router.refresh()`, which would otherwise overwrite the
+  inputs with the server's unchanged values and destroy what was just typed.
 
 **Not started**
 
 | | Why it matters |
 |---|---|
-| **Next 16 upgrade** | 14.2.35 carries 21 advisories. Fine for two private users, not fine public. Breaking: `cookies()`, `params`, `searchParams` became async — touches `lib/supabase/server.ts` and two pages. ~30 min. |
+| **Next 16 upgrade** | 14.2.35 carries 21 advisories. Fine for two private users, not fine public. Breaking: `cookies()`, `params`, `searchParams` became async — touches `lib/supabase/server.ts`, `app/page.tsx`, `app/setup/page.tsx`. ~30 min. **Parked** pending a look at Squirrelingo, which Sean believes is on the same Next version; if so it's one decision across both apps. |
 | **Review triggers** | Time / stalled / adherence / season checks writing to `plan_reviews`. Smallest remaining piece and it's the loop that makes the AI builder worth having. |
 | **Food UI** | Schema and template exist; no screens. Makes the app daily rather than 3×/week. |
 | **AI builder** | The differentiator. Design agreed (below). |
@@ -156,6 +182,13 @@ gap, so a weekly lifter isn't nagged on day three.
 
 ## 8. Lessons worth not relearning
 
+- **Check the platform config before suspecting the code.** A whole afternoon
+  went into a `__dirname` error in an Edge bundle that reproduced nowhere
+  locally, because a Vercel Framework Preset of `Other` was never on the list of
+  suspects. A green build is not evidence that the right builder ran.
+- **A fixed symptom and a fixed cause aren't the same thing.** The
+  relative-import change fixed the build, so the still-failing deploy read as
+  "the fix didn't land." Two separate problems wearing one bug report.
 - **Verification that can't fail isn't verification.** `verify-db` twice
   reported success against a database with no schema — first because it only
   matched Postgres' `42P01` and not PostgREST's `PGRST205`, then because it

@@ -76,7 +76,7 @@ const fail = (m) => {
 
 console.log(`\nChecking ${url}\n`);
 
-console.log("Tables (01_schema.sql):");
+console.log("Tables (…0001_schema.sql):");
 for (const t of TABLES) {
   const { error } = await sb.from(t).select("*", { head: true, count: "exact" });
   if (isMissing(error)) {
@@ -90,7 +90,7 @@ for (const t of TABLES) {
 
 const schemaLoaded = missingTables.length === 0;
 
-console.log("\nFunctions (02_functions.sql):");
+console.log("\nFunctions (…0002_functions.sql):");
 {
   // Signed out, clone_plan should fail with "not authenticated" — that's a
   // pass. Only "function not found" is a miss.
@@ -110,7 +110,7 @@ console.log("\nFunctions (02_functions.sql):");
 
 console.log("\nTemplates (visible signed-out, per migration 05):");
 if (!schemaLoaded) {
-  fail("skipped — tables are missing, run 01_schema.sql first");
+  fail("skipped — tables are missing, push the migrations first");
 } else {
   const { data, error } = await sb
     .from("plans")
@@ -136,7 +136,7 @@ if (!schemaLoaded) {
   }
 }
 
-console.log("\nRLS (03_rls.sql):");
+console.log("\nRLS (…0003_rls.sql):");
 if (!schemaLoaded) {
   fail("skipped — cannot test RLS on tables that don't exist");
 } else {
@@ -151,7 +151,7 @@ if (!schemaLoaded) {
     .from("plans")
     .insert({ kind: "gym", name: "rls probe", is_template: true });
   if (writeErr) pass("signed-out users cannot create plans");
-  else fail("signed-out users CAN create plans — check 03_rls.sql");
+  else fail("signed-out users CAN create plans — check …0003_rls.sql");
 }
 
 console.log("");

@@ -1,7 +1,12 @@
 # Streakproof — v1 → v2 code change map
 
-The v2 SQL lives in `supabase/migrations/`. Nothing was ever deployed, so there is no
-data to migrate: v2 is a fresh install.
+The v2 SQL lives in `supabase/migrations/`. v1 was never deployed, so there was
+no data to migrate: v2 was a fresh install.
+
+**This document is a historical record.** Steps 1–7 are done and the prose below
+still describes them in the imperative, as it was written before the work
+happened. Read it for *why* a change was made, not as a to-do list. Current
+status lives in `STATEOFPLAY.md`; conventions live in `CLAUDE.md`.
 
 ## Status
 
@@ -19,7 +24,21 @@ data to migrate: v2 is a fresh install.
 
 The app now queries v2 and nothing else. `npm run build` and `npx tsc --noEmit`
 are clean; `npm test` covers the date and streak logic; `npm run verify:db`
-checks a live Supabase project has the schema loaded.
+checks a live Supabase project has the schema loaded. The app is deployed and
+rendering at `streakproof-app.vercel.app`.
+
+Two follow-ups landed on 2 Aug 2026 after the deploy came up, both of them
+regressions of principles this document already states:
+
+- **Step 4's backfill was undoing itself.** `Tracker` seeds its local set state
+  in a `useState` initializer, which runs once on mount; a client-side nav to
+  `?date=…` stays on the same route and keeps the instance, so the previous
+  date's typed values stayed on screen and were written to the new date.
+  `<Tracker key={activeDate}>` in `app/page.tsx` forces the remount.
+- **Step 5's editor swallowed errors.** `app/program/actions.ts` returned void
+  and discarded the Supabase error — the same silent-write bug step 4 fixed in
+  the set logger. Actions now return `{ ok, error }` and `ProgramEditor` shows a
+  Retry banner.
 
 ---
 
