@@ -48,6 +48,16 @@ temporary measure, with the weaknesses mitigated rather than ignored:
   satisfied the hint is shown alongside the password form, with a "remembered
   it? sign in instead" link — quite often the hint is all someone needed, and
   not changing the password is the better outcome.
+- **Two of three answers, all three asked, one per screen.** Forgetting one of
+  three is common, and 3-of-3 turns that into a permanent lockout with no
+  support channel. Two rejected alternatives, both of which look like the same
+  feature: *showing* a random two lets an attacker who knows two answers retry
+  until that pair comes up — about a third of attempts, against a limit that
+  resets hourly; and checking each answer as it is entered turns three unknowns
+  into three independent one-unknown problems, each brute-forceable alone. So
+  all three are always asked, the verdict arrives once at the end, and only the
+  passing threshold moved. A blank counts as wrong, so someone who has genuinely
+  forgotten one can leave it empty rather than inventing something.
 - **Two steps, joined by a single-use token.** Answers are checked first and,
   on success, Postgres mints a 256-bit token valid for ten minutes; the password
   form spends it. Asking for answers and a new password on one form means the

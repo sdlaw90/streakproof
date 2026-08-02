@@ -275,16 +275,38 @@ begin
   if n <> 1 then raise exception 'FAIL: correct answers did not verify (got % rows)', n; end if;
   raise notice 'PASS: answers verify, case- and space-insensitively';
 
+  -- Two of three is the passing threshold, so one wrong still gets in.
   select count(*) into n from public.verify_recovery_answers(
     'sean@example.com', array['Fluffy', 'oak lane', 'wrong']);
-  if n <> 0 then raise exception 'FAIL: a wrong answer still verified'; end if;
-  raise notice 'PASS: a wrong answer fails';
+  if n <> 1 then raise exception 'FAIL: 2 of 3 correct did not verify'; end if;
+  raise notice 'PASS: two correct out of three verifies';
+
+  -- A blank counts as wrong, not as a free pass.
+  select count(*) into n from public.verify_recovery_answers(
+    'sean@example.com', array['Fluffy', 'oak lane', '']);
+  if n <> 1 then raise exception 'FAIL: two correct plus a blank did not verify'; end if;
+  raise notice 'PASS: a blank third answer is allowed';
+
+  select count(*) into n from public.verify_recovery_answers(
+    'sean@example.com', array['Fluffy', 'wrong', 'wrong']);
+  if n <> 0 then raise exception 'FAIL: only ONE correct answer verified'; end if;
+  raise notice 'PASS: one correct out of three fails';
+
+  select count(*) into n from public.verify_recovery_answers(
+    'sean@example.com', array['', '', '']);
+  if n <> 0 then raise exception 'FAIL: three blanks verified'; end if;
+  raise notice 'PASS: three blanks fail';
 
   select count(*) into n from public.verify_recovery_answers(
     'nobody@example.com', array['a', 'b', 'c']);
   if n <> 0 then raise exception 'FAIL: unknown email returned rows'; end if;
   raise notice 'PASS: unknown email is indistinguishable from a wrong answer';
 end $$;
+
+-- Each verification above consumed one of the five hourly attempts. Reset the
+-- log so the assertions below test what they claim to; the rate limiter itself
+-- is asserted separately at the end of this section.
+delete from recovery_attempts;
 
 -- Two-step reset (20260803000004): verification must hand back a single-use,
 -- expiring token, and nothing else may be accepted in its place.
@@ -369,6 +391,8 @@ begin
   raise notice 'PASS: recovery tokens are not client-readable';
 end $$;
 reset role;
+
+delete from recovery_attempts;
 
 -- Rate limit. Counting exact prior attempts here would be brittle — the limit
 -- is per email, so the unknown-email probe above doesn't count against this

@@ -41,6 +41,12 @@ Every version below is a git tag (`v0.1.0`). Compare links at the bottom.
   unknown account. This is an interim measure to be deleted once transactional
   email exists — [ADR 0012](docs/decisions/0012-security-questions-as-interim-recovery.md)
   says how.
+- **The reset asks the security questions one at a time and passes on two of
+  three.** Forgetting one answer no longer means a permanently locked account.
+  All three are still asked and the verdict still arrives once, at the end:
+  showing only two would let someone who knows two answers retry until that pair
+  came up, and per-question feedback would make each answer attackable on its
+  own. A blank counts as wrong, so a forgotten answer can be left empty.
 - **`/recovery` and `/recovery/reset`**, plus a "Forgotten your password?" link
   on sign-in. The reset runs in three steps — email, then the questions, then
   the new password — joined by a single-use 256-bit token that expires in ten
@@ -128,6 +134,10 @@ Every version below is a git tag (`v0.1.0`). Compare links at the bottom.
   passed against a schema layout production doesn't have. The stub now creates
   it in `extensions` exactly as Supabase does — with that change the harness
   reproduces the production failure, which is the only reason to trust it now.
+- **A wrong security answer wiped all three fields.** React 19 resets an
+  uncontrolled form once its action completes, so one typo cost the user every
+  answer — with only five attempts an hour, and while they're already locked
+  out. The answer fields are controlled now.
 - **An unreadable profile sent you to the template picker instead of sign-in.**
   `loadPlan()` discarded the error from the profile query, so a failed read and
   a user with no plan were indistinguishable — both produced a null plan id and
@@ -155,12 +165,14 @@ Every version below is a git tag (`v0.1.0`). Compare links at the bottom.
 
 ### Database
 
-Four migrations. The last needs `npm run db:push`:
+Six migrations. The last needs `npm run db:push`:
 
 - `20260803000001_account_recovery.sql` — applied
 - `20260803000002_more_templates.sql` — applied
 - `20260803000003_intake_images.sql` — applied
-- `20260803000004_recovery_tokens.sql` — **not yet applied**
+- `20260803000004_recovery_tokens.sql` — applied
+- `20260803000005_fix_pgcrypto_search_path.sql` — applied
+- `20260803000006_two_of_three_answers.sql` — **not yet applied**
 
 Each was applied in order against stock Postgres 16 with the RLS harness
 passing before being committed. See [docs/MIGRATIONS.md](docs/MIGRATIONS.md).

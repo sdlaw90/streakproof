@@ -41,6 +41,15 @@ function Submit({ label }: { label: string }) {
 export default function ResetForm() {
   const [email, setEmail] = useState("");
   const [questions, setQuestions] = useState<Question[] | null>(null);
+
+  // Controlled, so a wrong answer doesn't wipe the other two.
+  //
+  // React 19 resets an uncontrolled form once its action completes. That's
+  // usually what you want; here it means one typo costs the user all three
+  // answers, and they only get five attempts an hour. Someone locked out of
+  // their account is the last person who should be retyping things.
+  const [answers, setAnswers] = useState<Record<number, string>>({});
+  const [step, setStep] = useState(0);
   const [lookupPending, startLookup] = useTransition();
 
   const [verifyState, verifyAction] = useActionState<VerifyResult | null, FormData>(
@@ -161,23 +170,79 @@ export default function ResetForm() {
     );
   }
 
-  // ---- Step 2: the questions ---------------------------------------------
+  // ---- Step 2: the questions, one at a time ------------------------------
+  //
+  // All three are asked; two must be right. Presenting them one per screen is
+  // purely presentational — nothing is checked until the whole set is
+  // submitted, because per-question feedback would let each answer be attacked
+  // on its own. See docs/decisions/0012.
+  const total = questions.length;
+  const q = questions[step];
+  const filled = questions.filter(
+    (x) => (answers[x.position] ?? "").trim().length > 0
+  ).length;
+  const canSubmit = filled >= 2;
+
   return (
     <form action={verifyAction} className="space-y-4 rounded-2xl border border-line bg-panel p-5">
       <input type="hidden" name="email" value={email} />
 
-      {questions.map((q) => (
-        <label key={q.position} className="block">
-          <span className="mb-1 block text-sm font-semibold">{q.question}</span>
-          <input
-            name={`answer_${q.position}`}
-            type="text"
-            required
-            autoComplete="off"
-            className={FIELD}
-          />
-        </label>
+      {/* Every answer stays in the payload, including the ones not on screen. */}
+      {questions.map((x) => (
+        <input
+          key={x.position}
+          type="hidden"
+          name={`answer_${x.position}`}
+          value={answers[x.position] ?? ""}
+        />
       ))}
+
+      <div className="flex items-center justify-between text-xs text-faint">
+        <span>
+          Question {step + 1} of {total}
+        </span>
+        <span>{filled} answered</span>
+      </div>
+
+      <div className="flex gap-1.5">
+        {questions.map((x, i) => (
+          <span
+            key={x.position}
+            className={
+              "h-1 flex-1 rounded-full " +
+              (i === step
+                ? "bg-accent"
+                : (answers[x.position] ?? "").trim()
+                  ? "bg-accent/40"
+                  : "bg-panel2")
+            }
+          />
+        ))}
+      </div>
+
+      <label className="block">
+        <span className="mb-2 block text-base font-semibold">{q.question}</span>
+        <input
+          type="text"
+          autoComplete="off"
+          autoFocus
+          value={answers[q.position] ?? ""}
+          onChange={(e) =>
+            setAnswers((prev) => ({ ...prev, [q.position]: e.target.value }))
+          }
+          onKeyDown={(e) => {
+            // Enter advances rather than submitting a half-filled form.
+            if (e.key === "Enter" && step < total - 1) {
+              e.preventDefault();
+              setStep(step + 1);
+            }
+          }}
+          className={FIELD}
+        />
+        <span className="mt-1.5 block text-xs text-faint">
+          Can&rsquo;t remember this one? Leave it blank — you need two of three.
+        </span>
+      </label>
 
       {verifyState?.error && (
         <p className="rounded-lg bg-hot/10 px-3 py-2 text-sm text-hot" role="alert">
@@ -185,7 +250,37 @@ export default function ResetForm() {
         </p>
       )}
 
-      <Submit label="Check my answers" />
+      <div className="flex gap-2">
+        {step > 0 && (
+          <button
+            type="button"
+            onClick={() => setStep(step - 1)}
+            className="rounded-xl border border-line px-4 py-3 text-sm font-semibold text-muted"
+          >
+            Back
+          </button>
+        )}
+
+        {step < total - 1 ? (
+          <button
+            type="button"
+            onClick={() => setStep(step + 1)}
+            className="flex-1 rounded-xl border border-accent2 px-4 py-3 font-semibold text-accent2"
+          >
+            Next
+          </button>
+        ) : (
+          <div className="flex-1">
+            <Submit label="Check my answers" />
+          </div>
+        )}
+      </div>
+
+      {step === total - 1 && !canSubmit && (
+        <p className="text-center text-xs text-faint">
+          Answer at least two of the three.
+        </p>
+      )}
 
       <p className="text-center text-xs text-faint">
         Five attempts an hour. Capitals and spacing don&rsquo;t matter.

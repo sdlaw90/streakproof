@@ -94,8 +94,10 @@ export async function verifyAnswers(
   for (let i = 1; i <= SECURITY_QUESTION_COUNT; i++) {
     answers.push(String(formData.get(`answer_${i}`) || "").trim());
   }
-  if (answers.some((a) => a.length < 2)) {
-    return { ok: false, error: "Answer all three questions." };
+  // Two of three must be answered; a blank third is allowed and counts as
+  // wrong. Postgres enforces the same rule — this is the fast rejection.
+  if (answers.filter((a) => a.length >= 2).length < 2) {
+    return { ok: false, error: "Answer at least two of the three questions." };
   }
 
   const supabase = await createClient();
