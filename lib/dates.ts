@@ -64,6 +64,31 @@ export function sanitizeLogDate(
   return input;
 }
 
+/** The hour (0–23) right now in the given IANA timezone. */
+export function hourIn(timeZone: string): number {
+  try {
+    return Number(
+      new Intl.DateTimeFormat("en-GB", {
+        timeZone,
+        hour: "2-digit",
+        hour12: false,
+      }).format(new Date())
+    );
+  } catch {
+    return new Date().getUTCHours();
+  }
+}
+
+/** "Sunday, 2 August" — the home screen's date line. */
+export function longDate(dateStr: string): string {
+  return new Date(dateStr + "T00:00:00Z").toLocaleDateString("en-GB", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    timeZone: "UTC",
+  });
+}
+
 /** "Today" / "Yesterday" / "Wed, Aug 5" — for date pickers and history rows. */
 export function humanDate(dateStr: string, today: string): string {
   const delta = daysBetween(dateStr, today);

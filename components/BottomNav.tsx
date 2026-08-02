@@ -3,11 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+// "Edit" moved into UserDrawer — it's a settings action, not a destination you
+// hop between mid-set. Home is now a summary; the workout itself is /workout.
 const TABS = [
-  { href: "/", label: "Today", icon: "🏋️" },
+  { href: "/", label: "Home", icon: "🏠" },
+  { href: "/workout", label: "Workout", icon: "🏋️" },
   { href: "/history", label: "History", icon: "📅" },
   { href: "/progress", label: "Progress", icon: "📈" },
-  { href: "/program", label: "Edit", icon: "⚙️" },
 ];
 
 export default function BottomNav() {
@@ -21,6 +23,7 @@ export default function BottomNav() {
             <Link
               key={t.href}
               href={t.href}
+              aria-current={active ? "page" : undefined}
               className={
                 "flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium transition " +
                 (active ? "text-accent" : "text-faint")

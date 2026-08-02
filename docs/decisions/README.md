@@ -34,6 +34,8 @@ principles are constraints on decisions, not decisions themselves).
 | [0007](0007-server-actions-return-result.md) | Server actions return `{ ok, error }` | Accepted |
 | [0008](0008-migrations-over-pasted-sql.md) | Migrations, not pasted SQL | Accepted |
 | [0009](0009-never-miss-twice-median-gap.md) | "Never miss twice" uses the user's own median gap | Accepted |
+| [0010](0010-home-is-a-summary.md) | Home is a summary; the day is suggested, not scheduled | Accepted |
+| [0011](0011-bottom-nav-plus-account-drawer.md) | Bottom nav for destinations, drawer for account | Accepted |
 
 ADRs 0001–0009 were written on 2 Aug 2026, after the fact, from
 `STATEOFPLAY.md` and `docs/V2-CODE-CHANGES.md`. The decisions are real and are

@@ -1,5 +1,6 @@
 import { computeStats } from "@/lib/stats";
 import { sanitizeLogDate, todayIn, formatISODate } from "@/lib/dates";
+import { greetingFor, suggestDay } from "@/lib/suggest";
 
 let fails = 0;
 function check(name: string, cond: boolean, extra = "") {
@@ -49,6 +50,38 @@ check("120 days ago rejected", sanitizeLogDate("2026-04-01","2026-07-31") === "2
 check("garbage rejected", sanitizeLogDate("'; drop table --","2026-07-31") === "2026-07-31");
 check("non-date rejected", sanitizeLogDate("2026-02-30","2026-07-31") === "2026-07-31");
 check("undefined -> today", sanitizeLogDate(undefined,"2026-07-31") === "2026-07-31");
+
+console.log("\nday rotation suggestion:");
+const mkDay = (key: string, sort: number) => ({
+  id: "day-" + key, plan_id: "p", key, title: key, subtitle: null, sort, est_minutes: 40,
+});
+const rotation = [mkDay("A", 0), mkDay("B", 1), mkDay("C", 2)];
+
+check("nothing done -> first day in sort order",
+  suggestDay(rotation, {}, "2026-07-31")?.day.key === "A");
+check("nothing done -> reason is never-done",
+  suggestDay(rotation, {}, "2026-07-31")?.reason === "never-done");
+check("one day unlogged wins over an old one",
+  suggestDay(rotation, { "day-A": "2026-07-01", "day-B": "2026-07-30" }, "2026-07-31")
+    ?.day.key === "C");
+check("all done -> longest since",
+  suggestDay(rotation,
+    { "day-A": "2026-07-29", "day-B": "2026-07-20", "day-C": "2026-07-30" },
+    "2026-07-31")?.day.key === "B");
+check("tie broken by sort order",
+  suggestDay(rotation,
+    { "day-A": "2026-07-25", "day-B": "2026-07-25", "day-C": "2026-07-25" },
+    "2026-07-31")?.day.key === "A");
+check("lastAgoDays reported", suggestDay(rotation,
+  { "day-A": "2026-07-29", "day-B": "2026-07-20", "day-C": "2026-07-30" },
+  "2026-07-31")?.lastAgoDays === 11);
+check("empty plan -> null", suggestDay([], {}, "2026-07-31") === null);
+
+console.log("\ngreeting:");
+check("6am -> morning", greetingFor(6) === "Good morning");
+check("noon -> afternoon", greetingFor(12) === "Good afternoon");
+check("6pm -> evening", greetingFor(18) === "Good evening");
+check("1am counts as evening, not morning", greetingFor(1) === "Good evening");
 
 console.log(fails === 0 ? "\nAll stats/date checks passed.\n" : `\n${fails} FAILED\n`);
 process.exit(fails ? 1 : 0);

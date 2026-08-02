@@ -26,7 +26,41 @@ Every version below is a git tag (`v0.1.0`). Compare links at the bottom.
 
 ## [Unreleased]
 
-Nothing yet.
+### Added
+
+- **A home screen.** `/` is now a summary: the date, a greeting, the "never miss
+  twice" nudge when it applies, today's suggested session, the food plan's
+  state, and three headline stats. It used to render the set logger directly —
+  the first thing the app ever showed you was a grid of empty inputs.
+- **Day suggestion.** `suggestDay()` in `lib/suggest.ts` picks the day you're
+  most due for: never-done wins outright in `sort` order, otherwise longest
+  since last done, ties broken by `sort`. Days stay a rotation with no weekday
+  binding, so a missed day can't desynchronise anything. See
+  [ADR 0010](docs/decisions/0010-home-is-a-summary.md).
+- **Account drawer** (`components/UserDrawer.tsx`) — right-edge panel holding
+  plan editing, plan switching, timezone and sign out. Modelled on
+  SquirreLingo's, with three things that one lacks: it animates out as well as
+  in, it carries proper dialog semantics (`role="dialog"`, `aria-modal`, focus
+  in and restored, body scroll lock), and nothing in it is the only path to
+  anything. See [ADR 0011](docs/decisions/0011-bottom-nav-plus-account-drawer.md).
+- **`loadFoodSummary()`** — reads the active food plan and its builds without
+  redirecting. Having no food plan is a normal state the home screen renders
+  honestly, not a reason to bounce someone to `/setup`.
+- **`hourIn()` and `longDate()`** in `lib/dates.ts`, for the timezone-correct
+  greeting and date line.
+- Eleven new assertions covering the rotation suggestion and the greeting
+  boundaries (`npm test` is now 27).
+- **`docs/MEAL-FRAMEWORK.md`** — the reasoning behind the food side, which until
+  now only existed in chat. The schema and seeded template encode it; this is
+  the *why*. Verified against `20260802000004_templates.sql`: 6 builds, 25
+  pantry items across five roles, two prep sessions, all matching.
+
+### Changed
+
+- **The set logger moved to `/workout`** and accepts `?day=<key>`, which is how
+  home hands off its suggestion. `?date=` backfill is unchanged.
+- **Bottom nav is now Home / Workout / History / Progress.** `Edit` moved into
+  the drawer — it's a settings action, not somewhere you hop between sets.
 
 ---
 

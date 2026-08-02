@@ -97,6 +97,58 @@ export async function loadPlan(kind: PlanKind = "gym"): Promise<PlanContext> {
   };
 }
 
+export type BuildSummary = {
+  id: string;
+  key: string;
+  title: string;
+  subtitle: string | null;
+  is_fallback: boolean;
+  est_minutes: number | null;
+};
+
+export type FoodSummary = {
+  plan: Plan | null;
+  builds: BuildSummary[];
+};
+
+/**
+ * The food side, for the home screen only.
+ *
+ * Unlike loadPlan() this never redirects: not having a food plan is a normal
+ * state the home screen renders honestly, not a reason to bounce someone off
+ * the page. A user with a gym plan and no food plan is expected.
+ */
+export async function loadFoodSummary(): Promise<FoodSummary> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { plan: null, builds: [] };
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("active_food_plan_id")
+    .eq("id", user.id)
+    .single<{ active_food_plan_id: string | null }>();
+
+  const planId = profile?.active_food_plan_id;
+  if (!planId) return { plan: null, builds: [] };
+
+  const { data: plan } = await supabase
+    .from("plans")
+    .select("*")
+    .eq("id", planId)
+    .single<Plan>();
+
+  const { data: builds } = await supabase
+    .from("builds")
+    .select("id, key, title, subtitle, is_fallback, est_minutes")
+    .eq("plan_id", planId)
+    .order("sort");
+
+  return { plan: plan ?? null, builds: (builds ?? []) as BuildSummary[] };
+}
+
 /** Loads all of the user's sessions (for the given days) and their set logs. */
 export async function loadSessionsAndSets(
   userId: string,

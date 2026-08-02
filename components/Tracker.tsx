@@ -50,6 +50,7 @@ export default function Tracker({
   today,
   activeDate,
   serverTimezone,
+  initialDayId,
 }: {
   displayName: string;
   planName: string;
@@ -58,9 +59,13 @@ export default function Tracker({
   today: string;
   activeDate: string;
   serverTimezone: string;
+  /** Which day tab to open on — the home screen's suggestion, via ?day=. */
+  initialDayId?: string;
 }) {
   const router = useRouter();
-  const [activeDayId, setActiveDayId] = useState(views[0]?.day.id ?? "");
+  const [activeDayId, setActiveDayId] = useState(
+    initialDayId ?? views[0]?.day.id ?? ""
+  );
   const [state, setState] = useState<AllState>(() => buildInitial(views));
   const [saveStates, setSaveStates] = useState<Record<string, SaveState>>({});
 
