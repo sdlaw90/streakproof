@@ -44,10 +44,16 @@ you choose it, and in the food editor afterwards.
   cries wolf stops being read. The keyword lists are tuned to that line, and the
   unit tests pin both directions: soy sauce flags wheat, jasmine rice flags
   nothing.
-- The unit tests earned their keep immediately. `soy sauce` as a literal keyword
-  failed against the seeded pantry's actual name, "Soy-ginger-garlic sauce" —
-  exactly the kind of gap that would otherwise have shipped as silent
-  under-flagging.
+- **Over-matching has a limit, held by `exceptKeywords`.** Erring wide is right
+  until it's obviously wrong: "rice noodles" contains "noodle" and contains no
+  wheat, "corn tortillas" contains "tortilla", "gluten-free bread" contains
+  "bread". A flag that's wrong on a case the user can see is wrong is how the
+  flags stop being read at all — which costs more than the over-matching bought.
+- Two gaps were found by *running it*, not by review, and both are now pinned by
+  tests. `soy sauce` as a literal keyword missed the seeded pantry's actual name
+  "Soy-ginger-garlic sauce" (silent under-flagging, the worse failure). Rice
+  noodles flagged for wheat on the live plan card (visible over-flagging). Unit
+  tests and a typecheck caught neither.
 - Cuisines are recorded but nothing consumes them yet; there's one seeded food
   template. They exist for the generator, which is the point — it can't build a
   rotation without knowing which four flavours to build it from.

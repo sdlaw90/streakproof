@@ -44,6 +44,14 @@ export type Allergen = {
    * `flagAllergens()`.
    */
   keywords: string[];
+  /**
+   * Substrings that override a keyword match. "Rice noodles" contains
+   * "noodle" and contains no wheat; "gluten-free bread" contains "bread".
+   * Without these the flags are wrong on obvious cases, and a flag that's
+   * obviously wrong is one people stop reading — which costs more than the
+   * over-matching bought.
+   */
+  exceptKeywords?: string[];
 };
 
 /**
@@ -61,10 +69,20 @@ export const ALLERGENS: Allergen[] = [
   // are listed because a pantry rarely calls it that — the seeded template says
   // "Soy-ginger-garlic sauce". Deliberately NOT a bare "soy": tofu and edamame
   // are gluten-free, and a flag that cries wolf stops being read.
-  { id: "wheat", label: "Wheat", keywords: ["wheat", "bread", "naan", "tortilla", "pasta", "noodle", "ramen", "udon", "flour", "couscous", "panko", "soy sauce", "soy-ginger", "hoisin", "teriyaki", "seitan"] },
+  {
+    id: "wheat",
+    label: "Wheat",
+    keywords: ["wheat", "bread", "naan", "tortilla", "pasta", "noodle", "ramen", "udon", "flour", "couscous", "panko", "soy sauce", "soy-ginger", "hoisin", "teriyaki", "seitan"],
+    exceptKeywords: ["rice noodle", "rice paper", "glass noodle", "corn tortilla", "almond flour", "rice flour", "gluten-free", "gluten free", "wheat-free"],
+  },
   { id: "soy", label: "Soy", keywords: ["soy", "tofu", "edamame", "miso", "tamari", "tempeh"] },
   { id: "sesame", label: "Sesame", keywords: ["sesame", "tahini", "hummus"] },
-  { id: "gluten", label: "Gluten", keywords: ["wheat", "bread", "naan", "tortilla", "pasta", "ramen", "udon", "barley", "rye", "flour", "couscous", "panko", "soy sauce", "soy-ginger", "hoisin", "teriyaki", "seitan"] },
+  {
+    id: "gluten",
+    label: "Gluten",
+    keywords: ["wheat", "bread", "naan", "tortilla", "pasta", "noodle", "ramen", "udon", "barley", "rye", "flour", "couscous", "panko", "soy sauce", "soy-ginger", "hoisin", "teriyaki", "seitan"],
+    exceptKeywords: ["rice noodle", "rice paper", "glass noodle", "corn tortilla", "almond flour", "rice flour", "gluten-free", "gluten free"],
+  },
 ];
 
 export type FoodIntake = {
@@ -107,8 +125,10 @@ export function validateFoodIntake(intake: FoodIntake): string | null {
  * a label would catch. The UI has to say so wherever this is used, and the
  * user has to be the one who decides.
  *
- * Deliberately biased toward false positives: flagging soy sauce for a wheat
- * allergy is a mild annoyance, missing it is not.
+ * Biased toward false positives, but only up to a point: flagging soy sauce for
+ * a wheat allergy is a mild annoyance and missing it is not — while flagging
+ * rice noodles is just wrong, and being wrong on an obvious case is how the
+ * flags stop being read at all. `exceptKeywords` holds that line.
  */
 export function flagAllergens(
   ingredientName: string,
@@ -117,9 +137,11 @@ export function flagAllergens(
   const name = ingredientName.toLowerCase();
   const declared = new Set(declaredAllergenIds);
 
-  return ALLERGENS.filter(
-    (a) => declared.has(a.id) && a.keywords.some((k) => name.includes(k))
-  ).map((a) => a.id);
+  return ALLERGENS.filter((a) => {
+    if (!declared.has(a.id)) return false;
+    if (a.exceptKeywords?.some((k) => name.includes(k))) return false;
+    return a.keywords.some((k) => name.includes(k));
+  }).map((a) => a.id);
 }
 
 /** Human-readable labels for a set of allergen ids. */

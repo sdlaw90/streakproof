@@ -38,7 +38,9 @@ Every version below is a git tag (`v0.1.0`). Compare links at the bottom.
   you choose it and in the food editor after. Flagging is explicitly a hint, not
   a filter and not a safety check — it matches words in a name, can't read a
   label, and every place it appears says so. Nothing is ever silently removed,
-  because removing it would imply the result is safe to eat.
+  because removing it would imply the result is safe to eat. Matching errs wide
+  but not absurdly — soy sauce flags wheat, rice noodles and corn tortillas
+  don't, and naming something "gluten-free" clears the flag.
 - **Plan reviews.** `lib/review.ts` implements the time, stalled and adherence
   checks; home records what's due and shows one quiet card with three plain
   options, one of them "it's fine as it is". Every threshold is deliberately
@@ -242,7 +244,9 @@ users, gym side complete.
   you choose it and in the food editor after. Flagging is explicitly a hint, not
   a filter and not a safety check — it matches words in a name, can't read a
   label, and every place it appears says so. Nothing is ever silently removed,
-  because removing it would imply the result is safe to eat.
+  because removing it would imply the result is safe to eat. Matching errs wide
+  but not absurdly — soy sauce flags wheat, rice noodles and corn tortillas
+  don't, and naming something "gluten-free" clears the flag.
 - **Plan reviews.** `lib/review.ts` implements the time, stalled and adherence
   checks; home records what's due and shows one quiet card with three plain
   options, one of them "it's fine as it is". Every threshold is deliberately

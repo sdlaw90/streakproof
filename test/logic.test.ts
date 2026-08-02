@@ -282,6 +282,16 @@ check("greek yogurt flags milk",
 check("tahini flags sesame", flagAllergens("Tahini", ["sesame"]).includes("sesame"));
 check("jasmine rice flags nothing",
   flagAllergens("Jasmine rice", ALLERGENS.map((a) => a.id)).length === 0);
+check("rice noodles are NOT wheat — caught by running the real thing",
+  flagAllergens("Rice noodles", ["wheat", "gluten"]).length === 0);
+check("plain noodles still flag",
+  flagAllergens("Egg noodles", ["wheat"]).includes("wheat"));
+check("corn tortillas are not wheat",
+  flagAllergens("Corn tortillas", ["wheat"]).length === 0);
+check("plain tortillas still flag",
+  flagAllergens("Tortillas", ["wheat"]).includes("wheat"));
+check("naming something gluten-free clears the flag",
+  flagAllergens("Gluten-free bread", ["gluten"]).length === 0);
 check("one name can flag several allergens at once",
   flagAllergens("Soy sauce", ["soy", "wheat", "gluten"]).length === 3);
 
