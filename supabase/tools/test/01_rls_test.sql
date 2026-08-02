@@ -286,6 +286,90 @@ begin
   raise notice 'PASS: unknown email is indistinguishable from a wrong answer';
 end $$;
 
+-- Two-step reset (20260803000004): verification must hand back a single-use,
+-- expiring token, and nothing else may be accepted in its place.
+do $$
+declare
+  v_token text;
+  v_user  uuid;
+  v_second uuid;
+begin
+  select token into v_token from public.verify_recovery_answers(
+    'sean@example.com', array['FLUFFY', 'oak lane', 'sprout']);
+  if v_token is null or length(v_token) < 32 then
+    raise exception 'FAIL: verification did not mint a usable token (%)', v_token;
+  end if;
+  raise notice 'PASS: verification mints a token';
+
+  v_user := public.redeem_recovery_token(v_token);
+  if v_user is null then raise exception 'FAIL: a fresh token would not redeem'; end if;
+  raise notice 'PASS: a fresh token redeems to a user';
+
+  v_second := public.redeem_recovery_token(v_token);
+  if v_second is not null then
+    raise exception 'FAIL: a token redeemed TWICE — replay is possible';
+  end if;
+  raise notice 'PASS: a token is single use';
+
+  if public.redeem_recovery_token('not-a-real-token') is not null then
+    raise exception 'FAIL: a made-up token redeemed';
+  end if;
+  raise notice 'PASS: a made-up token is refused';
+end $$;
+
+-- Expiry is enforced by the function, not by a cleanup job.
+do $$
+declare v_user uuid;
+begin
+  insert into recovery_tokens (token, user_id, expires_at)
+  values ('expired-token-for-test',
+          '11111111-1111-1111-1111-111111111111',
+          now() - interval '1 minute');
+  v_user := public.redeem_recovery_token('expired-token-for-test');
+  if v_user is not null then
+    raise exception 'FAIL: an expired token still redeemed';
+  end if;
+  raise notice 'PASS: an expired token is refused';
+end $$;
+
+-- Minting a new token must invalidate an abandoned earlier one.
+do $$
+declare v_first text; v_second text;
+begin
+  select token into v_first from public.verify_recovery_answers(
+    'sean@example.com', array['FLUFFY', 'oak lane', 'sprout']);
+  select token into v_second from public.verify_recovery_answers(
+    'sean@example.com', array['FLUFFY', 'oak lane', 'sprout']);
+  if v_first is null or v_second is null then
+    raise exception 'FAIL: expected two tokens';
+  end if;
+  if public.redeem_recovery_token(v_first) is not null then
+    raise exception 'FAIL: an abandoned token survived a newer one';
+  end if;
+  if public.redeem_recovery_token(v_second) is null then
+    raise exception 'FAIL: the newest token would not redeem';
+  end if;
+  raise notice 'PASS: minting a token invalidates the previous one';
+end $$;
+
+-- A signed-out client must not be able to read the token table directly.
+set role anon;
+do $$
+declare n int; v_blocked boolean := false;
+begin
+  begin
+    select count(*) into n from recovery_tokens;
+    if n > 0 then v_blocked := false; else v_blocked := true; end if;
+  exception when others then
+    v_blocked := true;
+  end;
+  if not v_blocked then
+    raise exception 'FAIL: anon read % recovery tokens', n;
+  end if;
+  raise notice 'PASS: recovery tokens are not client-readable';
+end $$;
+reset role;
+
 -- Rate limit. Counting exact prior attempts here would be brittle — the limit
 -- is per email, so the unknown-email probe above doesn't count against this
 -- one. Loop instead and assert it trips within a bounded number of tries.

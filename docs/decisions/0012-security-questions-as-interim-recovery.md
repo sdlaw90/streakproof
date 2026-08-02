@@ -44,7 +44,17 @@ temporary measure, with the weaknesses mitigated rather than ignored:
 - **Entirely optional and skippable.** The opt-in appears once after signup and
   can be skipped; it's reachable later from the account drawer.
 - **The hint is never shown before the answers are satisfied.** A hint on the
-  login screen leaks to anyone who can type an email address.
+  login screen leaks to anyone who can type an email address. Once they *are*
+  satisfied the hint is shown alongside the password form, with a "remembered
+  it? sign in instead" link — quite often the hint is all someone needed, and
+  not changing the password is the better outcome.
+- **Two steps, joined by a single-use token.** Answers are checked first and,
+  on success, Postgres mints a 256-bit token valid for ten minutes; the password
+  form spends it. Asking for answers and a new password on one form means the
+  user only learns the answers were wrong *after* choosing a password, which is
+  the wrong order for someone already locked out. The token is burned in the
+  same statement that reads it, so a replay loses the race, and minting a new
+  one invalidates any abandoned earlier token.
 
 ## Consequences
 
@@ -64,8 +74,9 @@ temporary measure, with the weaknesses mitigated rather than ignored:
 **This is meant to be deleted.** When transactional email is wired up:
 
 1. Switch the forgotten-password link to Supabase's own reset flow.
-2. Delete `/recovery/reset`, `resetWithAnswers`, `verify_recovery_answers`,
-   `recovery_questions_for`, `security_answers` and `recovery_attempts`.
+2. Delete `/recovery/reset`, `verifyAnswers`, `resetWithToken`,
+   `verify_recovery_answers`, `redeem_recovery_token`, `recovery_questions_for`,
+   `security_answers`, `recovery_attempts` and `recovery_tokens`.
 3. Keep or drop `profiles.password_hint` on its own merits — it's harmless but
    pointless once email works.
 4. Supersede this ADR rather than editing it.

@@ -42,7 +42,12 @@ Every version below is a git tag (`v0.1.0`). Compare links at the bottom.
   email exists — [ADR 0012](docs/decisions/0012-security-questions-as-interim-recovery.md)
   says how.
 - **`/recovery` and `/recovery/reset`**, plus a "Forgotten your password?" link
-  on sign-in.
+  on sign-in. The reset runs in three steps — email, then the questions, then
+  the new password — joined by a single-use 256-bit token that expires in ten
+  minutes. Doing it on one form would mean learning the answers were wrong only
+  after choosing a password. On success the hint is shown next to the password
+  form with a "remembered it? sign in instead" link, since the hint is often all
+  that was needed.
 - **Three more starting plans, five in total** — `bodyweight-anywhere` (no
   equipment), `fat-loss-full-body` (three days, conditioning finishers) and
   `push-pull-legs-muscle` (hypertrophy, full gym). The picker now orders by how
@@ -129,13 +134,14 @@ Every version below is a git tag (`v0.1.0`). Compare links at the bottom.
 
 ### Database
 
-Three migrations. The third needs `npm run db:push`:
+Four migrations. The last needs `npm run db:push`:
 
 - `20260803000001_account_recovery.sql` — applied
 - `20260803000002_more_templates.sql` — applied
-- `20260803000003_intake_images.sql` — **not yet applied**
+- `20260803000003_intake_images.sql` — applied
+- `20260803000004_recovery_tokens.sql` — **not yet applied**
 
-Both were applied in order against stock Postgres 16 with the RLS harness
+Each was applied in order against stock Postgres 16 with the RLS harness
 passing before being committed. See [docs/MIGRATIONS.md](docs/MIGRATIONS.md).
 
 ---
