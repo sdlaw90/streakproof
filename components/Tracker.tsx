@@ -1,13 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { deleteSet, saveSet, saveTimezone } from "@/app/actions";
 import BottomNav from "@/components/BottomNav";
 import RestTimer from "@/components/RestTimer";
 import { addDays, daysBetween, humanDate } from "@/lib/dates";
 import type { DayView, Exercise } from "@/lib/types";
-import type { Stats } from "@/lib/stats";
 
 type LocalSet = { weight: string; reps: string; done: boolean };
 type DayState = Record<string, LocalSet[]>; // exerciseId -> sets
@@ -43,19 +43,13 @@ function buildInitial(views: DayView[]): AllState {
 }
 
 export default function Tracker({
-  displayName,
-  planName,
   views,
-  stats,
   today,
   activeDate,
   serverTimezone,
   initialDayId,
 }: {
-  displayName: string;
-  planName: string;
   views: DayView[];
-  stats: Stats;
   today: string;
   activeDate: string;
   serverTimezone: string;
@@ -219,22 +213,22 @@ export default function Tracker({
   return (
     <>
       <main className="mx-auto max-w-2xl px-4 pb-28 pt-6">
-        <header className="mb-3 flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-bold tracking-tight">Hey {displayName} 👋</h1>
-            <p className="text-sm text-muted">{planName}</p>
-          </div>
-          <form action="/auth/signout" method="post">
-            <button className="rounded-lg border border-line px-3 py-1.5 text-xs text-muted">
-              Sign out
-            </button>
-          </form>
+        {/*
+          No greeting, stats row or sign-out here any more. Home carries the
+          greeting, the nudge and the stats; the drawer carries sign-out. This
+          screen does one thing: log the session. See docs/decisions/0010.
+        */}
+        <header className="mb-3 flex items-baseline justify-between gap-3">
+          <h1 className="truncate text-lg font-bold tracking-tight">
+            {active.day.title}
+          </h1>
+          <Link href="/" className="shrink-0 text-sm text-accent2">
+            Home
+          </Link>
         </header>
 
-        <StatsBar stats={stats} />
-
         {/* Date picker — lets you fill in a session you forgot to log. */}
-        <div className="mt-4 flex items-center gap-2">
+        <div className="flex items-center gap-2">
           <button
             onClick={() => goToDate(addDays(activeDate, -1))}
             disabled={backDays >= MAX_BACKFILL_DAYS}
@@ -362,35 +356,6 @@ export default function Tracker({
   );
 }
 
-function StatsBar({ stats }: { stats: Stats }) {
-  return (
-    <div>
-      <div className="grid grid-cols-3 gap-2">
-        <Stat
-          label="Streak"
-          value={`${stats.streakWeeks} wk`}
-          hot={stats.streakWeeks >= 2}
-        />
-        <Stat label="This week" value={String(stats.thisWeek)} />
-        <Stat label="All-time" value={String(stats.total)} />
-      </div>
-      {stats.nudge && (
-        <p className="mt-2 text-center text-xs text-gold">{stats.nudge}</p>
-      )}
-    </div>
-  );
-}
-
-function Stat({ label, value, hot }: { label: string; value: string; hot?: boolean }) {
-  return (
-    <div className="rounded-xl border border-line bg-panel px-3 py-2 text-center">
-      <div className={"text-lg font-bold " + (hot ? "text-gold" : "text-ink")}>
-        {value}
-      </div>
-      <div className="text-[11px] uppercase tracking-wide text-faint">{label}</div>
-    </div>
-  );
-}
 
 function ExerciseCard({
   exercise,

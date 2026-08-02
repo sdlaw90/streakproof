@@ -61,6 +61,17 @@ Every version below is a git tag (`v0.1.0`). Compare links at the bottom.
   home hands off its suggestion. `?date=` backfill is unchanged.
 - **Bottom nav is now Home / Workout / History / Progress.** `Edit` moved into
   the drawer — it's a settings action, not somewhere you hop between sets.
+- **`Tracker` is just the logger now.** The greeting, plan name, three-stat row,
+  nudge and sign-out button all moved to home or the drawer rather than being
+  shown twice; its header is the day title and a link back. `displayName`,
+  `planName` and `stats` are no longer props.
+
+### Fixed
+
+- **The drawer's scrim left the bottom nav undimmed and clickable.** Both were
+  `z-40`, and at equal z-index DOM order wins — `BottomNav` renders after
+  `<main>`. Scrim is now `z-50` and the panel `z-[60]`. Caught by driving the
+  deployed app, not by reading the code.
 
 ---
 

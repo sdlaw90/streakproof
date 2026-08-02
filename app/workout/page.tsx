@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import Tracker from "@/components/Tracker";
 import { loadPlan, loadSessionsAndSets, type RawSet } from "@/lib/load";
-import { computeStats } from "@/lib/stats";
 import { sanitizeLogDate } from "@/lib/dates";
 import type { DayView, SetLog } from "@/lib/types";
 
@@ -34,7 +33,7 @@ export default async function WorkoutPage({
   const ctx = await loadPlan("gym");
   if (ctx.redirect) redirect(ctx.redirect);
 
-  const { userId, displayName, timezone, today, plan, days, exercises } = ctx;
+  const { userId, timezone, today, days, exercises } = ctx;
 
   // ?date=YYYY-MM-DD fills in a session you forgot to log. Defaults to the
   // user's local today.
@@ -55,14 +54,6 @@ export default async function WorkoutPage({
     arr.push(s);
     setsBySession.set(s.session_id, arr);
   }
-
-  // Workout dates (any completed set) for streak/stat math.
-  const doneDates: string[] = [];
-  for (const sess of sessions) {
-    const rows = setsBySession.get(sess.id) ?? [];
-    if (rows.some((r) => r.done)) doneDates.push(sess.performed_on);
-  }
-  const stats = computeStats(doneDates, today);
 
   const views: DayView[] = days.map((day) => {
     const daySessions = sessions.filter((s) => s.day_id === day.id);
@@ -116,10 +107,7 @@ export default async function WorkoutPage({
     // stay on screen, then get written to the newly selected date on blur.
     <Tracker
       key={activeDate}
-      displayName={displayName}
-      planName={plan?.name ?? "Your plan"}
       views={views}
-      stats={stats}
       today={today}
       activeDate={activeDate}
       serverTimezone={timezone}

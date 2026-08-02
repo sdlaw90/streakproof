@@ -99,7 +99,10 @@ export default function UserDrawer({
         onClick={close}
         aria-hidden="true"
         className={
-          "fixed inset-0 z-40 bg-black/70 transition-opacity duration-200 motion-reduce:transition-none " +
+          // z-50 / z-[60] deliberately: BottomNav is z-40, and at equal z-index
+          // DOM order wins — the nav renders after <main>, so a z-40 scrim left
+          // the tab bar undimmed and clickable underneath the open drawer.
+          "fixed inset-0 z-50 bg-black/70 transition-opacity duration-200 motion-reduce:transition-none " +
           (open ? "opacity-100" : "pointer-events-none opacity-0")
         }
       />
@@ -111,7 +114,7 @@ export default function UserDrawer({
         aria-label="Account menu"
         tabIndex={-1}
         className={
-          "fixed inset-y-0 right-0 z-50 flex w-[min(360px,88vw)] flex-col border-l border-line bg-panel shadow-[-8px_0_30px_rgba(0,0,0,0.45)] outline-none transition-transform duration-200 ease-out motion-reduce:transition-none " +
+          "fixed inset-y-0 right-0 z-[60] flex w-[min(360px,88vw)] flex-col border-l border-line bg-panel shadow-[-8px_0_30px_rgba(0,0,0,0.45)] outline-none transition-transform duration-200 ease-out motion-reduce:transition-none " +
           (open ? "translate-x-0" : "translate-x-full")
         }
       >
