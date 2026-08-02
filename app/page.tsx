@@ -96,7 +96,13 @@ export default async function Home({
   });
 
   return (
+    // key={activeDate} forces a remount when the date changes. Tracker seeds its
+    // local set state in a useState initializer, which only runs on mount — a
+    // client-side nav to ?date=… lands on the same route in the same tree
+    // position, so React keeps the instance and the previous date's typed values
+    // stay on screen, then get written to the newly selected date on blur.
     <Tracker
+      key={activeDate}
       displayName={displayName}
       planName={plan?.name ?? "Your plan"}
       views={views}

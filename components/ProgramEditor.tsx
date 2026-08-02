@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import {
   addDay,
   addExercise,
@@ -11,6 +11,7 @@ import {
   moveExercise,
   updateDay,
   updateExercise,
+  type EditResult,
 } from "@/app/program/actions";
 import type { Day, Exercise } from "@/lib/types";
 
@@ -29,12 +30,38 @@ export default function ProgramEditor({
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
+  const [error, setError] = useState<string | null>(null);
 
-  function run(fn: () => Promise<unknown>) {
+  // The last failed action, so "Retry" can replay it without the user having to
+  // re-type anything.
+  const lastFailed = useRef<(() => Promise<EditResult>) | null>(null);
+
+  /**
+   * Runs an edit and surfaces the result. On failure we deliberately do NOT
+   * call router.refresh() — refreshing would replace the inputs with the
+   * server's (unchanged) values and destroy what the user just typed.
+   */
+  function run(fn: () => Promise<EditResult>) {
     start(async () => {
-      await fn();
-      router.refresh();
+      const res: EditResult = await fn().catch((e: unknown) => ({
+        ok: false,
+        error: e instanceof Error ? e.message : "Network error",
+      }));
+
+      if (res.ok) {
+        lastFailed.current = null;
+        setError(null);
+        router.refresh();
+      } else {
+        lastFailed.current = fn;
+        setError(res.error ?? "Save failed");
+      }
     });
+  }
+
+  function retry() {
+    const fn = lastFailed.current;
+    if (fn) run(fn);
   }
 
   if (!canEdit) {
@@ -51,6 +78,18 @@ export default function ProgramEditor({
         Editing <span className="font-semibold text-ink">{programName}</span>. Changes
         save automatically and show up on your Today tab.
       </p>
+
+      {error && (
+        <div className="flex items-center gap-3 rounded-xl border border-hot/40 bg-hot/10 px-3 py-2.5 text-sm">
+          <span className="flex-1 text-hot">{error}</span>
+          <button
+            onClick={retry}
+            className="rounded-lg border border-hot/50 px-3 py-1 text-xs font-semibold text-hot"
+          >
+            Retry
+          </button>
+        </div>
+      )}
 
       {days.map((day, di) => {
         const exs = exercisesByDay[day.id] ?? [];
