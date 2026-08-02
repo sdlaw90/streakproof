@@ -12,9 +12,13 @@ while looking perfect in Notepad.
 `main` auto-deploys to production. There is no staging environment, so this list
 is the only gate.
 
+If the change touched code — anything outside `*.md` — all three must pass
+before pushing. A docs-only commit skips them; a gate that gets routinely
+ignored stops being a gate.
+
 ```powershell
 npx tsc --noEmit      # typecheck
-npm run build         # must pass before any push
+npm run build
 npm test              # date + streak logic. Needs Node 22.6+
 ```
 

@@ -5,8 +5,9 @@ the local folder. Updated at the end of that session, after the app went live
 and the stack was upgraded. Everything a fresh session needs to pick this up
 cold.
 
-**Current head:** `cf3837e` on `main`, deployed to production and rendering.
-Working tree clean. Nothing is in flight.
+**Current release:** `v0.1.0` on `main`, deployed to production and rendering.
+Nothing is in flight. (Named by tag, not by commit — a head SHA goes stale the
+moment anything lands, including the commit that updates this line.)
 
 This document is *now*. For how it got here, see `CHANGELOG.md`; for why a given
 choice was made, `docs/decisions/`; for the schema's state, `docs/MIGRATIONS.md`.
