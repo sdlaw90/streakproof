@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import BottomNav from "@/components/BottomNav";
 import ProgressView from "@/components/ProgressView";
-import { loadProgram, loadSessionsAndSets, type RawSet } from "@/lib/load";
+import { loadPlan, loadSessionsAndSets, type RawSet } from "@/lib/load";
 import { computeStats } from "@/lib/stats";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +11,7 @@ function todayUTC() {
 }
 
 export default async function ProgressPage() {
-  const ctx = await loadProgram();
+  const ctx = await loadPlan();
   if (ctx.redirect) redirect(ctx.redirect);
 
   const { userId, days, exercises } = ctx;

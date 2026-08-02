@@ -1,11 +1,25 @@
 # Streakproof — v1 → v2 code change map
 
-The v2 SQL is written, tested, and lives in `supabase/v2/`. **The app code has
-not been changed yet** — it still queries the v1 tables, so pointing the current
-code at a v2 database will fail. This document is the work list to close that
-gap, ordered so each step leaves the app in a working state.
+The v2 SQL lives in `supabase/v2/`. Nothing was ever deployed, so there is no
+data to migrate: v2 is a fresh install.
 
-Nothing was ever deployed, so there is no data to migrate: v2 is a fresh install.
+## Status
+
+| Step | State |
+|------|-------|
+| 1. Types | **done** |
+| 2. Loaders | **done** |
+| 3. Template picker + `clone_plan` | **done** |
+| 4. Deploy-blockers (UTC, backfill, variable sets, save failures) | **done** |
+| 5. Plan editor | **done** |
+| 6. Duration + review triggers | duration shipped; review checks not written |
+| 7. "Never miss twice" | **done** |
+| 8. Food UI | not started |
+| 9. AI builder | not started |
+
+The app now queries v2 and nothing else. `npm run build` and `npx tsc --noEmit`
+are clean; `npm test` covers the date and streak logic; `npm run verify:db`
+checks a live Supabase project has the schema loaded.
 
 ---
 

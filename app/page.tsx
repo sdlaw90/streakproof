@@ -1,14 +1,11 @@
 import { redirect } from "next/navigation";
 import Tracker from "@/components/Tracker";
-import { loadProgram, loadSessionsAndSets, type RawSet } from "@/lib/load";
+import { loadPlan, loadSessionsAndSets, type RawSet } from "@/lib/load";
 import { computeStats } from "@/lib/stats";
+import { sanitizeLogDate } from "@/lib/dates";
 import type { DayView, SetLog } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
-
-function todayUTC() {
-  return new Date().toISOString().slice(0, 10);
-}
 
 function toSetLogs(rows: RawSet[]): SetLog[] {
   return rows
@@ -21,15 +18,22 @@ function toSetLogs(rows: RawSet[]): SetLog[] {
     .sort((a, b) => a.set_number - b.set_number);
 }
 
-export default async function Home() {
-  const ctx = await loadProgram();
+export default async function Home({
+  searchParams,
+}: {
+  searchParams?: { date?: string };
+}) {
+  const ctx = await loadPlan("gym");
   if (ctx.redirect) redirect(ctx.redirect);
 
-  const { userId, displayName, program, days, exercises } = ctx;
+  const { userId, displayName, timezone, today, plan, days, exercises } = ctx;
+
+  // ?date=YYYY-MM-DD fills in a session you forgot to log. Defaults to the
+  // user's local today.
+  const activeDate = sanitizeLogDate(searchParams?.date, today);
+
   const dayIds = days.map((d) => d.id);
   const { sessions, sets } = await loadSessionsAndSets(userId, dayIds);
-
-  const today = todayUTC();
 
   // Group sets by session.
   const setsBySession = new Map<string, RawSet[]>();
@@ -37,14 +41,6 @@ export default async function Home() {
     const arr = setsBySession.get(s.session_id) ?? [];
     arr.push(s);
     setsBySession.set(s.session_id, arr);
-  }
-
-  // All-time best weight per exercise (across every session, incl. today).
-  const bestAll: Record<string, number> = {};
-  for (const s of sets) {
-    if (s.weight != null && (s.reps ?? 0) > 0) {
-      bestAll[s.exercise_id] = Math.max(bestAll[s.exercise_id] ?? 0, s.weight);
-    }
   }
 
   // Workout dates (any completed set) for streak/stat math.
@@ -57,8 +53,12 @@ export default async function Home() {
 
   const views: DayView[] = days.map((day) => {
     const daySessions = sessions.filter((s) => s.day_id === day.id);
-    const todaySession = daySessions.find((s) => s.performed_on === today);
-    const lastSession = daySessions.find((s) => s.performed_on !== today);
+    const activeSession = daySessions.find((s) => s.performed_on === activeDate);
+    // "Last time" is the most recent session BEFORE the one being edited, not
+    // merely a different one — otherwise backfilling shows you the future.
+    const lastSession = daySessions
+      .filter((s) => s.performed_on < activeDate)
+      .sort((a, b) => (a.performed_on < b.performed_on ? 1 : -1))[0];
 
     const todaySets: Record<string, SetLog[]> = {};
     const lastSets: Record<string, SetLog[]> = {};
@@ -67,8 +67,8 @@ export default async function Home() {
     const dayExercises = exercises.filter((e) => e.day_id === day.id);
 
     for (const ex of dayExercises) {
-      if (todaySession) {
-        const rows = (setsBySession.get(todaySession.id) ?? []).filter(
+      if (activeSession) {
+        const rows = (setsBySession.get(activeSession.id) ?? []).filter(
           (r) => r.exercise_id === ex.id
         );
         if (rows.length) todaySets[ex.id] = toSetLogs(rows);
@@ -79,10 +79,10 @@ export default async function Home() {
         );
         if (rows.length) lastSets[ex.id] = toSetLogs(rows);
       }
-      // Best weight excluding today's session so a new PR today lights up.
+      // Best weight excluding the session being edited, so a new PR lights up.
       let best = 0;
       for (const sess of daySessions) {
-        if (sess.performed_on === today) continue;
+        if (sess.performed_on === activeDate) continue;
         for (const r of setsBySession.get(sess.id) ?? []) {
           if (r.exercise_id === ex.id && r.weight != null && (r.reps ?? 0) > 0) {
             best = Math.max(best, r.weight);
@@ -98,9 +98,12 @@ export default async function Home() {
   return (
     <Tracker
       displayName={displayName}
-      programName={program?.name ?? "Your program"}
+      planName={plan?.name ?? "Your plan"}
       views={views}
       stats={stats}
+      today={today}
+      activeDate={activeDate}
+      serverTimezone={timezone}
     />
   );
 }

@@ -1,26 +1,21 @@
 import { redirect } from "next/navigation";
 import BottomNav from "@/components/BottomNav";
 import ProgramEditor from "@/components/ProgramEditor";
-import { loadProgram } from "@/lib/load";
-import { createClient } from "@/lib/supabase/server";
+import { loadPlan } from "@/lib/load";
 import type { Exercise } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
 export default async function ProgramPage() {
-  const ctx = await loadProgram();
+  const ctx = await loadPlan("gym");
   if (ctx.redirect) redirect(ctx.redirect);
 
-  const { userId, program, days, exercises } = ctx;
+  const { userId, plan, days, exercises } = ctx;
 
-  // Who owns this program?
-  const supabase = createClient();
-  const { data: prog } = await supabase
-    .from("programs")
-    .select("owner_id")
-    .eq("id", program?.id ?? "")
-    .single();
-  const canEdit = !!program && prog?.owner_id === userId;
+  // In v2 the plan a user has active is always one they own (clone_plan sets
+  // owner_id), so the old "did you claim this program?" lookup is gone. RLS
+  // enforces the real rule server-side either way.
+  const canEdit = !!plan && plan.owner_id === userId;
 
   const exercisesByDay: Record<string, Exercise[]> = {};
   for (const d of days) {
@@ -30,14 +25,14 @@ export default async function ProgramPage() {
   return (
     <>
       <main className="mx-auto max-w-2xl px-4 pb-28 pt-6">
-        <h1 className="mb-1 text-xl font-bold tracking-tight">Edit program</h1>
+        <h1 className="mb-1 text-xl font-bold tracking-tight">Edit plan</h1>
         <p className="mb-5 text-sm text-muted">
           Tweak your days and exercises without touching any code.
         </p>
         <ProgramEditor
           canEdit={canEdit}
-          programId={program?.id ?? ""}
-          programName={program?.name ?? "Your program"}
+          planId={plan?.id ?? ""}
+          programName={plan?.name ?? "Your plan"}
           days={days}
           exercisesByDay={exercisesByDay}
         />

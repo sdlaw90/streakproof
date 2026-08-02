@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
-import type { Day, Exercise, Program } from "@/lib/types";
+import { todayIn } from "@/lib/dates";
+import type { Day, Exercise, Plan, PlanKind } from "@/lib/types";
 
 const NIL = "00000000-0000-0000-0000-000000000000";
 
@@ -18,19 +19,34 @@ export type RawSession = {
   performed_on: string;
 };
 
-export type ProgramContext =
+export type PlanContext =
   | { redirect: "/login" | "/setup" }
   | {
       redirect?: undefined;
       userId: string;
       displayName: string;
-      program: Program | null;
+      timezone: string;
+      today: string;
+      plan: Plan | null;
       days: Day[];
       exercises: Exercise[];
     };
 
-/** Loads the signed-in user's profile, program, days and exercises. */
-export async function loadProgram(): Promise<ProgramContext> {
+type ProfileRow = {
+  display_name: string | null;
+  timezone: string | null;
+  active_gym_plan_id: string | null;
+  active_food_plan_id: string | null;
+};
+
+/**
+ * Loads the signed-in user's profile plus their active plan of the given kind.
+ *
+ * v1 had a single profiles.program_id, so a user could only ever have one plan.
+ * There are now two independent slots, which is what lets the food side exist
+ * without competing with the gym side for the same column.
+ */
+export async function loadPlan(kind: PlanKind = "gym"): Promise<PlanContext> {
   const supabase = createClient();
   const {
     data: { user },
@@ -39,20 +55,26 @@ export async function loadProgram(): Promise<ProgramContext> {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("display_name, program_id, program:programs(id, name, slug, owner_id)")
+    .select("display_name, timezone, active_gym_plan_id, active_food_plan_id")
     .eq("id", user.id)
-    .single();
+    .single<ProfileRow>();
 
-  if (!profile?.program_id) return { redirect: "/setup" };
+  const planId =
+    kind === "gym" ? profile?.active_gym_plan_id : profile?.active_food_plan_id;
+  if (!planId) return { redirect: "/setup" };
 
-  const program = (
-    Array.isArray(profile.program) ? profile.program[0] : profile.program
-  ) as Program | null;
+  const timezone = profile?.timezone || "UTC";
+
+  const { data: plan } = await supabase
+    .from("plans")
+    .select("*")
+    .eq("id", planId)
+    .single<Plan>();
 
   const { data: days } = await supabase
     .from("days")
     .select("*")
-    .eq("program_id", profile.program_id)
+    .eq("plan_id", planId)
     .order("sort");
 
   const dayList = (days ?? []) as Day[];
@@ -66,8 +88,10 @@ export async function loadProgram(): Promise<ProgramContext> {
 
   return {
     userId: user.id,
-    displayName: profile.display_name ?? "there",
-    program,
+    displayName: profile?.display_name ?? "there",
+    timezone,
+    today: todayIn(timezone),
+    plan: plan ?? null,
     days: dayList,
     exercises: (exercises ?? []) as Exercise[],
   };

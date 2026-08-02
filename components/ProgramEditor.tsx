@@ -16,13 +16,13 @@ import type { Day, Exercise } from "@/lib/types";
 
 export default function ProgramEditor({
   canEdit,
-  programId,
+  planId,
   programName,
   days,
   exercisesByDay,
 }: {
   canEdit: boolean;
-  programId: string;
+  planId: string;
   programName: string;
   days: Day[];
   exercisesByDay: Record<string, Exercise[]>;
@@ -190,7 +190,7 @@ export default function ProgramEditor({
       })}
 
       <button
-        onClick={() => run(() => addDay(programId))}
+        onClick={() => run(() => addDay(planId))}
         className="w-full rounded-2xl border border-dashed border-line py-3 text-sm font-semibold text-accent2"
       >
         + Add day
