@@ -1,0 +1,73 @@
+# Migration log
+
+Every file in `supabase/migrations/`, what it does, and where it has been
+applied. `supabase db push` tracks migrations by **filename**, so an applied
+migration is immutable — a mistake costs a follow-up migration, never an edit.
+See [ADR 0008](decisions/0008-migrations-over-pasted-sql.md).
+
+**Production ref:** `qpxzyzdzunazfvgxnrfz`
+
+**Last verified:** 2026-08-02 against production, `npm run verify:db` passing —
+all 16 tables present; `clone_plan` and `refresh_plan_estimates` callable; all
+three templates readable **signed out**; anon blocked from reading `sessions`
+and from creating plans. That chain covers every migration: templates being
+visible to anon requires both `…0004` and `…0005`, and the anon refusals require
+`…0003`.
+
+What that does **not** prove: it checks the objects it names, not the whole
+schema. A column added by a migration and used nowhere in the script would pass
+unnoticed. And this script has twice reported success against a database with no
+schema loaded — first because it only matched Postgres' `42P01` and not
+PostgREST's `PGRST205`, then because it queried templates as a signed-out user
+while the read policy was `TO authenticated`. Both bugs are fixed and both
+failure modes are now covered by the checks above, but treat a green run as
+strong evidence rather than proof.
+
+## Applied
+
+| Migration | Ships in | Prod | What it does |
+|---|---|---|---|
+| `20260802000001_schema.sql` | 0.1.0 | ✅ | All 16 tables: `plans`, `profiles`, `builder_profiles`, `days`, `exercises`, `sessions`, `set_logs`, `food_items`, `builds`, `build_items`, `prep_sessions`, `prep_tasks`, `meal_logs`, `prep_logs`, `plan_reviews`, `ai_generations`. Indexes. Triggers `handle_new_user()` and `touch_updated_at()`. |
+| `20260802000002_functions.sql` | 0.1.0 | ✅ | RLS helpers (`owns_plan`, `can_read_plan`, `owns_day`, `can_read_day`, `owns_build`, `can_read_build`, `owns_prep_session`, `can_read_prep_session`); `estimate_day_minutes()`, `refresh_plan_estimates()`; `clone_plan()`; `review_due_on()`. |
+| `20260802000003_rls.sql` | 0.1.0 | ✅ | Enables RLS on all 16 tables and defines every policy. `ai_generations` is select-only for the owner — inserts are service-role only. |
+| `20260802000004_templates.sql` | 0.1.0 | ✅ | Seeded template library: 2 gym plans, 1 food plan. **Generated** by `supabase/tools/gen_seed.py` — never hand-edit. See [ADR 0006](decisions/0006-generated-template-seeds.md). |
+| `20260802000005_public_template_reads.sql` | 0.1.0 | ✅ | `anon` select policies on `plans`, `days`, `exercises`, `builds`, `food_items`, scoped to `is_template` rows, so the signed-out template picker works. Added after `verify:db` false-passed by querying templates as a signed-out user against an `authenticated`-only policy. |
+
+## Pending
+
+None.
+
+## Adding a migration
+
+1. `supabase migration new <description>` — or create
+   `supabase/migrations/<timestamp>_<description>.sql` by hand.
+2. **RLS policies for any new table go in the same file.** Reference data
+   hanging off a plan uses the `owns_plan` / `can_read_plan` helpers.
+3. Test it against real Postgres before pushing — apply `migrations/*.sql` in
+   filename order, exactly as `db push` does:
+
+   ```bash
+   createdb sp
+   psql -d sp -f supabase/tools/test/00_supabase_stub.sql
+   for f in supabase/migrations/*.sql; do psql -d sp -v ON_ERROR_STOP=1 -f "$f"; done
+   psql -d sp -f supabase/tools/test/01_rls_test.sql
+   ```
+
+   > The stub fakes `auth.users` and `auth.uid()`. It is **test-only** and lives
+   > outside `migrations/` on purpose. Never run it against Supabase — it would
+   > shadow the real auth schema.
+
+   Mirror production in the stub. It once granted table privileges to
+   `authenticated` but not `anon`, so anon failed with "permission denied"
+   instead of the empty result a real project returns — which is exactly what
+   hid the bug `20260802000005` fixed.
+
+4. `npm run db:push`, then `npm run verify:db`.
+5. Add a row to the table above and a `### Database` note in `CHANGELOG.md`.
+
+## Changing template content
+
+If `20260802000004_templates.sql` is already applied — it is — edit
+`supabase/tools/gen_seed.py` and write a **new** migration for the delta.
+Regenerating over the applied file changes nothing in any database that has
+already seen it.

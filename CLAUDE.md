@@ -150,6 +150,37 @@ PR detection. Client-supplied dates go through `sanitizeLogDate()`.
   Vercel, which only ever sees the repo, but delete the stray one locally rather
   than pinning `turbopack.root` around it.
 
+### Change tracking
+
+Four documents, each with one job. Keeping them current is part of the change,
+not a follow-up task.
+
+| | Holds | Update when |
+|---|---|---|
+| `CHANGELOG.md` | What changed, per version | Every user-visible or schema change — add under `## [Unreleased]` |
+| `docs/decisions/` | *Why* a choice was made | A decision is expensive to reverse and non-obvious from the code |
+| `docs/MIGRATIONS.md` | Every migration and where it's applied | Any new migration |
+| `docs/RELEASING.md` | The pre-push and release checklist | The process changes |
+
+- **Keep a Changelog format, SemVer.** "Public API" here means the database
+  schema and user-facing behaviour: major = a migration needing manual
+  intervention or anything that breaks existing plans or logs; minor = a new
+  capability, table, or backwards-compatible migration; patch = fixes, bumps,
+  copy, docs. Versions are git tags; `npm version` bumps, commits and tags in one
+  step.
+- **ADRs are append-only.** Copy `docs/decisions/0000-template.md` to the next
+  number. Never edit an accepted ADR's decision — write a new one and link both
+  ways with `Superseded by`. The record of a wrong turn is worth as much as the
+  record of the right one.
+- **Don't write an ADR for** what the code already says plainly, style
+  preferences (they live here), or product principles (also here — principles
+  constrain decisions, they aren't decisions).
+- **`STATEOFPLAY.md` is the "pick this up cold" document** and names the current
+  head commit. It describes *now*; the changelog describes *how we got here*.
+  Don't duplicate the changelog into it.
+- **`docs/V2-CODE-CHANGES.md` is a historical record** and is not maintained.
+  Nothing new goes in it.
+
 ### Design language
 
 Dark, mobile-first, minimal chrome. Tailwind 4 is CSS-first: there is no
@@ -184,3 +215,14 @@ familiarity with this app's specifics.
 
 **Prefer one good recommendation over a menu.** When there's a real fork, give
 the recommendation first with reasoning, then the alternatives.
+
+**Bullets, most important first. Detail only when asked.** Long prose gets
+scanned rather than read, and the important part gets missed — brevity here is
+an accuracy concern, not a style one. Lead with the thing that changes the next
+action; offer the reasoning rather than including it.
+
+**One step at a time.** When something takes several commands, give one, wait
+for the result, then give the next. A whole checklist presented at once invites
+running it all together.
+
+**Commands go on their own line**, never buried mid-paragraph.

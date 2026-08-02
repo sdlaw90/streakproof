@@ -5,8 +5,11 @@ the local folder. Updated at the end of that session, after the app went live
 and the stack was upgraded. Everything a fresh session needs to pick this up
 cold.
 
-**Current head:** `937d984` on `main`, deployed to production and rendering.
+**Current head:** `cf3837e` on `main`, deployed to production and rendering.
 Working tree clean. Nothing is in flight.
+
+This document is *now*. For how it got here, see `CHANGELOG.md`; for why a given
+choice was made, `docs/decisions/`; for the schema's state, `docs/MIGRATIONS.md`.
 
 ---
 
@@ -108,7 +111,7 @@ gap, so a weekly lifter isn't nagged on day three.
 - App code fully on v2; build and typecheck clean.
 - `npm test` — 16 assertions on date and streak logic, including the exact UTC
   bug.
-- SQL harness — 14 assertions on RLS, cloning, and the anon boundary, run
+- SQL harness — 17 assertions on RLS, cloning, and the anon boundary, run
   against real Postgres in migration order.
 - Repo on GitHub, deployed to Vercel, environment variables set.
 - **The app is live and rendering** at `streakproof-app.vercel.app`. This was
