@@ -53,17 +53,36 @@ export async function loadPlan(kind: PlanKind = "gym"): Promise<PlanContext> {
   } = await supabase.auth.getUser();
   if (!user) return { redirect: "/login" };
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("display_name, timezone, active_gym_plan_id, active_food_plan_id")
     .eq("id", user.id)
     .single<ProfileRow>();
 
+  // A profile we can't read is a broken session, not a user without a plan.
+  //
+  // These two used to be indistinguishable: the error was discarded, `profile`
+  // came back null, and the null plan id bounced the user to /setup — which
+  // reads as "you have no plan" when the truth is "we couldn't tell". An
+  // expired JWT that still satisfies getUser() produces exactly this, and the
+  // user ends up staring at a template picker instead of a sign-in form.
+  //
+  // Same principle as ADR 0007, on the read side: never let a failure
+  // impersonate a legitimate empty state.
+  if (profileError || !profile) {
+    console.error(
+      "loadPlan: could not read profile for",
+      user.id,
+      profileError?.message ?? "no row returned"
+    );
+    return { redirect: "/login" };
+  }
+
   const planId =
-    kind === "gym" ? profile?.active_gym_plan_id : profile?.active_food_plan_id;
+    kind === "gym" ? profile.active_gym_plan_id : profile.active_food_plan_id;
   if (!planId) return { redirect: "/setup" };
 
-  const timezone = profile?.timezone || "UTC";
+  const timezone = profile.timezone || "UTC";
 
   const { data: plan } = await supabase
     .from("plans")
@@ -88,7 +107,7 @@ export async function loadPlan(kind: PlanKind = "gym"): Promise<PlanContext> {
 
   return {
     userId: user.id,
-    displayName: profile?.display_name ?? "there",
+    displayName: profile.display_name ?? "there",
     timezone,
     today: todayIn(timezone),
     plan: plan ?? null,
@@ -125,11 +144,18 @@ export async function loadFoodSummary(): Promise<FoodSummary> {
   } = await supabase.auth.getUser();
   if (!user) return { plan: null, builds: [] };
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("active_food_plan_id")
     .eq("id", user.id)
     .single<{ active_food_plan_id: string | null }>();
+
+  if (profileError) {
+    // Home renders "no food plan yet" either way, but a swallowed error here
+    // would make a real fault look like a normal empty state.
+    console.error("loadFoodSummary: could not read profile:", profileError.message);
+    return { plan: null, builds: [] };
+  }
 
   const planId = profile?.active_food_plan_id;
   if (!planId) return { plan: null, builds: [] };

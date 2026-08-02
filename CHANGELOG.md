@@ -117,6 +117,16 @@ Every version below is a git tag (`v0.1.0`). Compare links at the bottom.
 
 ### Fixed
 
+- **An unreadable profile sent you to the template picker instead of sign-in.**
+  `loadPlan()` discarded the error from the profile query, so a failed read and
+  a user with no plan were indistinguishable — both produced a null plan id and
+  a redirect to `/setup`. An expired session that still satisfies `getUser()`
+  lands exactly there, so the symptom was being shown "pick a starting plan"
+  when the real answer was "sign in again". The error is now surfaced and logged,
+  and an unreadable profile redirects to `/login`. `/setup` is reached only after
+  positively reading a profile that has no active plan. Same principle as
+  [ADR 0007](docs/decisions/0007-server-actions-return-result.md), applied to
+  reads: never let a failure impersonate a legitimate empty state.
 - **`npm run seed:gen` had been broken for a month.** It imported the v1
   generator at `supabase/gen_seed.py`, which was deleted as a "v1 leftover" in
   `628d992` — except it held the exercise text for both gym templates. Nothing
