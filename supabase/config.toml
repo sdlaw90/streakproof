@@ -1,0 +1,11 @@
+# Supabase CLI project config.
+#
+# Minimal on purpose: everything the CLI needs for `link` and `db push` is here,
+# and anything omitted falls back to the CLI's defaults. `project_id` is only a
+# local label — the actual project you're linked to is set by
+# `supabase link --project-ref <ref>` and stored outside the repo.
+project_id = "streakproof"
+
+[db]
+# Match Supabase's hosted major version so local runs behave the same.
+major_version = 15
