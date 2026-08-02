@@ -64,3 +64,72 @@ export function greetingFor(hour: number): string {
   if (hour >= 12 && hour < 18) return "Good afternoon";
   return "Good evening";
 }
+
+/**
+ * Which bowl to make next.
+ *
+ * Same shape as suggestDay(), same reason: the base stays constant and the
+ * sauce carries the variety, so what you want is whichever flavour you've gone
+ * longest without — not a fixed schedule. Five identical Tupperwares is the
+ * failure mode the whole food side exists to avoid (docs/MEAL-FRAMEWORK.md §3).
+ *
+ * Fallback builds are excluded. The four-minute meal and the grab-and-go shelf
+ * are a floor you drop to, never something the app tells you to cook.
+ */
+export function suggestBuild(
+  builds: { id: string; sort: number; is_fallback: boolean }[],
+  lastEatenByBuildId: Record<string, string | undefined>,
+  today: string
+): { buildId: string; lastAgoDays: number | null } | null {
+  const rotation = builds
+    .filter((b) => !b.is_fallback)
+    .sort((a, b) => a.sort - b.sort);
+  if (!rotation.length) return null;
+
+  const never = rotation.find((b) => !lastEatenByBuildId[b.id]);
+  if (never) return { buildId: never.id, lastAgoDays: null };
+
+  let best = rotation[0];
+  let bestAgo = daysBetween(lastEatenByBuildId[best.id]!, today);
+  for (const b of rotation.slice(1)) {
+    const ago = daysBetween(lastEatenByBuildId[b.id]!, today);
+    if (ago > bestAgo) {
+      best = b;
+      bestAgo = ago;
+    }
+  }
+  return { buildId: best.id, lastAgoDays: bestAgo };
+}
+
+/**
+ * Is a prep session due?
+ *
+ * Prep days ARE weekday-bound, unlike workout days — batch cooking is stapled
+ * to a specific evening because that's what makes it happen at all
+ * (docs/MEAL-FRAMEWORK.md §4). But missing one must not mean waiting a week:
+ * a session stays due until it's done or the next one comes round.
+ */
+export function prepDueOn(
+  weekday: number | null,
+  today: string,
+  lastDoneOn: string | undefined
+): "today" | "overdue" | "done" | "upcoming" {
+  if (weekday == null) return "upcoming";
+
+  const todayDow = new Date(today + "T00:00:00Z").getUTCDay();
+  const isToday = todayDow === weekday;
+
+  if (lastDoneOn) {
+    const ago = daysBetween(lastDoneOn, today);
+    if (ago === 0) return "done";
+    // Done within the last six days means this week's is covered.
+    if (ago < 6 && !isToday) return "upcoming";
+  }
+
+  if (isToday) return "today";
+
+  // How many days since that weekday last came round?
+  const since = (todayDow - weekday + 7) % 7;
+  if (!lastDoneOn) return since > 0 ? "overdue" : "upcoming";
+  return daysBetween(lastDoneOn, today) > since ? "overdue" : "upcoming";
+}

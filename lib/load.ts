@@ -123,11 +123,16 @@ export type BuildSummary = {
   subtitle: string | null;
   is_fallback: boolean;
   est_minutes: number | null;
+  sort: number;
 };
 
 export type FoodSummary = {
   plan: Plan | null;
   builds: BuildSummary[];
+  /** Most recent date each build was eaten, for the rotation suggestion. */
+  lastEatenByBuildId: Record<string, string | undefined>;
+  /** Meal logs for the user's local today. */
+  eatenToday: { id: string; title: string }[];
 };
 
 /**
@@ -142,23 +147,25 @@ export async function loadFoodSummary(): Promise<FoodSummary> {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { plan: null, builds: [] };
+  if (!user) return { plan: null, builds: [], lastEatenByBuildId: {}, eatenToday: [] };
 
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("active_food_plan_id")
+    .select("timezone, active_food_plan_id")
     .eq("id", user.id)
-    .single<{ active_food_plan_id: string | null }>();
+    .single<{ timezone: string | null; active_food_plan_id: string | null }>();
 
   if (profileError) {
     // Home renders "no food plan yet" either way, but a swallowed error here
     // would make a real fault look like a normal empty state.
     console.error("loadFoodSummary: could not read profile:", profileError.message);
-    return { plan: null, builds: [] };
+    return { plan: null, builds: [], lastEatenByBuildId: {}, eatenToday: [] };
   }
 
   const planId = profile?.active_food_plan_id;
-  if (!planId) return { plan: null, builds: [] };
+  if (!planId) {
+    return { plan: null, builds: [], lastEatenByBuildId: {}, eatenToday: [] };
+  }
 
   const { data: plan } = await supabase
     .from("plans")
@@ -168,11 +175,43 @@ export async function loadFoodSummary(): Promise<FoodSummary> {
 
   const { data: builds } = await supabase
     .from("builds")
-    .select("id, key, title, subtitle, is_fallback, est_minutes")
+    .select("id, key, title, subtitle, is_fallback, est_minutes, sort")
     .eq("plan_id", planId)
     .order("sort");
 
-  return { plan: plan ?? null, builds: (builds ?? []) as BuildSummary[] };
+  const buildList = (builds ?? []) as BuildSummary[];
+  const titles = new Map(buildList.map((b) => [b.id, b.title]));
+
+  const { data: meals } = await supabase
+    .from("meal_logs")
+    .select("id, build_id, name, eaten_on")
+    .eq("user_id", user.id)
+    .order("eaten_on", { ascending: false })
+    .limit(200);
+
+  const mealList = (meals ?? []) as {
+    id: string;
+    build_id: string | null;
+    name: string | null;
+    eaten_on: string;
+  }[];
+
+  const lastEatenByBuildId: Record<string, string | undefined> = {};
+  for (const m of mealList) {
+    if (!m.build_id) continue;
+    const prev = lastEatenByBuildId[m.build_id];
+    if (!prev || m.eaten_on > prev) lastEatenByBuildId[m.build_id] = m.eaten_on;
+  }
+
+  const today = todayIn(profile?.timezone || "UTC");
+  const eatenToday = mealList
+    .filter((m) => m.eaten_on === today)
+    .map((m) => ({
+      id: m.id,
+      title: m.build_id ? (titles.get(m.build_id) ?? "A meal") : (m.name ?? "A meal"),
+    }));
+
+  return { plan: plan ?? null, builds: buildList, lastEatenByBuildId, eatenToday };
 }
 
 /** Loads all of the user's sessions (for the given days) and their set logs. */

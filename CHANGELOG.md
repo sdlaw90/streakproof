@@ -28,6 +28,27 @@ Every version below is a git tag (`v0.1.0`). Compare links at the bottom.
 
 ### Added
 
+- **The food side has screens.** `/food` shows the bowl rotation with a
+  suggestion, the two fallback tiers under "Nothing prepped", what you've eaten
+  today, and a free-text box for everything else. `/food/prep` is the Sunday and
+  Wednesday checklist. `/setup/food` picks a food plan. Schema and seeded
+  template have existed since v2; this is the UI.
+- **`suggestBuild()`** picks whichever bowl you've gone longest without, beside
+  `suggestDay()` and pure like it. Fallback builds are excluded — the
+  four-minute meal is a floor you drop to, never something the app tells you to
+  cook.
+- **`prepDueOn()`** — prep sessions are weekday-bound (unlike workout days, and
+  deliberately so), but a missed one goes `overdue` rather than waiting a week,
+  because the answer is twenty minutes at the shop. See
+  [ADR 0014](docs/decisions/0014-food-ui-mirrors-the-gym-side.md).
+- **Free-text meal logging as a first-class path**, not an "other" bucket.
+  `meal_logs.name` with a null `build_id` has its own input and its own copy:
+  nothing logged is a cheat.
+- **Home's food card is real** — it shows the suggested bowl, how long since you
+  last had it, and what you've logged today.
+- Eighteen new assertions covering the build rotation and prep-session states
+  (`npm test` is now 73).
+
 - **Signup asks for a name, email, password and confirmation**, validated in the
   browser and again in the server action. The rules live in `lib/validate.ts` so
   the two can't drift; the server copy is the one that holds, because a server
@@ -114,7 +135,9 @@ Every version below is a git tag (`v0.1.0`). Compare links at the bottom.
 
 - **The set logger moved to `/workout`** and accepts `?day=<key>`, which is how
   home hands off its suggestion. `?date=` backfill is unchanged.
-- **Bottom nav is now Home / Workout / History / Progress.** `Edit` moved into
+- **Bottom nav is Home / Workout / Food / History / Progress.** Five tabs is the
+  ceiling; anything further goes in the drawer.
+- **Bottom nav previously became Home / Workout / History / Progress.** `Edit` moved into
   the drawer — it's a settings action, not somewhere you hop between sets.
 - **`Tracker` is just the logger now.** The greeting, plan name, three-stat row,
   nudge and sign-out button all moved to home or the drawer rather than being
@@ -185,6 +208,27 @@ First deployed release. Live at `streakproof-app.vercel.app`, tracking both
 users, gym side complete.
 
 ### Added
+
+- **The food side has screens.** `/food` shows the bowl rotation with a
+  suggestion, the two fallback tiers under "Nothing prepped", what you've eaten
+  today, and a free-text box for everything else. `/food/prep` is the Sunday and
+  Wednesday checklist. `/setup/food` picks a food plan. Schema and seeded
+  template have existed since v2; this is the UI.
+- **`suggestBuild()`** picks whichever bowl you've gone longest without, beside
+  `suggestDay()` and pure like it. Fallback builds are excluded — the
+  four-minute meal is a floor you drop to, never something the app tells you to
+  cook.
+- **`prepDueOn()`** — prep sessions are weekday-bound (unlike workout days, and
+  deliberately so), but a missed one goes `overdue` rather than waiting a week,
+  because the answer is twenty minutes at the shop. See
+  [ADR 0014](docs/decisions/0014-food-ui-mirrors-the-gym-side.md).
+- **Free-text meal logging as a first-class path**, not an "other" bucket.
+  `meal_logs.name` with a null `build_id` has its own input and its own copy:
+  nothing logged is a cheat.
+- **Home's food card is real** — it shows the suggested bowl, how long since you
+  last had it, and what you've logged today.
+- Eighteen new assertions covering the build rotation and prep-session states
+  (`npm test` is now 73).
 
 - **Two-user gym tracker** — per-set logging, PR badges, streaks, a progress
   chart, session history, a rest timer, and an in-app program editor. Installable

@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { hourIn, longDate } from "@/lib/dates";
 import { loadFoodSummary, loadPlan, loadSessionsAndSets } from "@/lib/load";
 import { computeStats } from "@/lib/stats";
-import { greetingFor, suggestDay } from "@/lib/suggest";
+import { greetingFor, suggestBuild, suggestDay } from "@/lib/suggest";
 
 export const dynamic = "force-dynamic";
 
@@ -64,7 +64,8 @@ export default async function Home() {
   // one: the four-minute meal and the grab-and-go shelf. Both carry
   // `is_fallback` — see docs/MEAL-FRAMEWORK.md §7.
   const fallbackBuilds = food.builds.filter((b) => b.is_fallback);
-  const regularBuilds = food.builds.filter((b) => !b.is_fallback);
+  const foodSuggestion = suggestBuild(food.builds, food.lastEatenByBuildId, today);
+  const suggestedBuild = food.builds.find((b) => b.id === foodSuggestion?.buildId);
 
   return (
     <>
@@ -152,41 +153,43 @@ export default async function Home() {
 
         {food.plan ? (
           <div className="rounded-2xl border border-line bg-panel p-5">
-            <p className="text-lg font-semibold">{food.plan.name}</p>
-            {regularBuilds.length > 0 && (
-              <ul className="mt-3 space-y-1.5">
-                {regularBuilds.map((b) => (
-                  <li key={b.id} className="flex items-baseline gap-2 text-sm">
-                    <span className="text-accent">•</span>
-                    <span>{b.title}</span>
-                    {b.est_minutes && (
-                      <span className="text-faint">~{b.est_minutes} min</span>
-                    )}
-                  </li>
-                ))}
-              </ul>
+            {food.eatenToday.length > 0 && (
+              <p className="mb-3 inline-block rounded-full bg-accent/15 px-2.5 py-1 text-xs font-semibold text-accent">
+                ✓ {food.eatenToday.length} logged today
+              </p>
             )}
 
-            {fallbackBuilds.length > 0 && (
-              <div className="mt-4 rounded-xl border border-line bg-panel2 px-3 py-2.5">
-                <p className="text-xs font-semibold text-gold">
-                  Nothing prepped? Still on plan:
+            {suggestedBuild ? (
+              <>
+                <p className="text-lg font-semibold">{suggestedBuild.title}</p>
+                {suggestedBuild.subtitle && (
+                  <p className="mt-0.5 text-sm text-muted">{suggestedBuild.subtitle}</p>
+                )}
+                <p className="mt-2 text-sm text-faint">
+                  {foodSuggestion?.lastAgoDays == null
+                    ? "Not tried yet"
+                    : `Last had it ${foodSuggestion.lastAgoDays} ${
+                        foodSuggestion.lastAgoDays === 1 ? "day" : "days"
+                      } ago`}
+                  {suggestedBuild.est_minutes ? ` · ~${suggestedBuild.est_minutes} min` : ""}
                 </p>
-                <ul className="mt-1.5 space-y-1">
-                  {fallbackBuilds.map((b) => (
-                    <li key={b.id} className="flex items-baseline gap-2 text-sm">
-                      <span className="text-muted">{b.title}</span>
-                      {b.est_minutes && (
-                        <span className="text-faint">~{b.est_minutes} min</span>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </div>
+              </>
+            ) : (
+              <p className="text-sm text-muted">{food.plan.name}</p>
             )}
-            <p className="mt-3 text-xs text-faint">
-              Meal logging isn&rsquo;t built yet — this is the plan, not a tracker.
-            </p>
+
+            <Link
+              href="/food"
+              className="mt-4 block rounded-xl border border-accent2 px-4 py-3 text-center font-semibold text-accent2"
+            >
+              Open food
+            </Link>
+
+            {fallbackBuilds.length > 0 && (
+              <p className="mt-3 text-xs text-faint">
+                Nothing prepped? {fallbackBuilds.map((b) => b.title).join(" · ")}
+              </p>
+            )}
           </div>
         ) : (
           <div className="rounded-2xl border border-dashed border-line bg-panel/60 p-5">
@@ -195,7 +198,7 @@ export default async function Home() {
               you want it, not because the app is nagging.
             </p>
             <Link
-              href="/setup"
+              href="/setup/food"
               className="mt-3 inline-block text-sm font-semibold text-accent2"
             >
               Browse food plans

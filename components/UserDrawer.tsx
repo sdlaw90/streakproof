@@ -36,7 +36,7 @@ const ACCOUNT_ITEMS: Item[] = [
 const PLAN_ITEMS: Item[] = [
   { label: "Edit your plan", hint: "Days, exercises, timing", icon: "⚙️", href: "/program" },
   { label: "Switch plan", hint: "Start from a different template", icon: "🔁", href: "/setup" },
-  { label: "Food plan", hint: "Coming soon", icon: "🥗", soon: true },
+  { label: "Food plan", hint: "Builds, prep days, fallbacks", icon: "🥗", href: "/food" },
 ];
 
 function initialOf(name: string): string {

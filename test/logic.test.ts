@@ -1,6 +1,6 @@
 import { computeStats } from "@/lib/stats";
 import { sanitizeLogDate, todayIn, formatISODate } from "@/lib/dates";
-import { greetingFor, suggestDay } from "@/lib/suggest";
+import { greetingFor, suggestDay, suggestBuild, prepDueOn } from "@/lib/suggest";
 import { validateSignup, validateRecovery, normalizeAnswer } from "@/lib/validate";
 import { GYM_INTAKE, missingAnswers, validateWeights, toPounds } from "@/lib/intake";
 
@@ -84,6 +84,36 @@ check("6am -> morning", greetingFor(6) === "Good morning");
 check("noon -> afternoon", greetingFor(12) === "Good afternoon");
 check("6pm -> evening", greetingFor(18) === "Good evening");
 check("1am counts as evening, not morning", greetingFor(1) === "Good evening");
+
+console.log("\nbuild rotation:");
+const mkBuild = (id: string, sort: number, fb = false) => ({ id, sort, is_fallback: fb });
+const bowls = [mkBuild("A", 1), mkBuild("B", 2), mkBuild("C", 3), mkBuild("FALLBACK", 9, true)];
+
+check("nothing eaten -> first bowl", suggestBuild(bowls, {}, "2026-07-31")?.buildId === "A");
+check("fallbacks are never suggested",
+  suggestBuild([mkBuild("FALLBACK", 9, true), mkBuild("A", 1)], {}, "2026-07-31")?.buildId === "A");
+check("only fallbacks -> nothing to suggest",
+  suggestBuild([mkBuild("FALLBACK", 9, true)], {}, "2026-07-31") === null);
+check("longest since wins",
+  suggestBuild(bowls, { A: "2026-07-30", B: "2026-07-20", C: "2026-07-29" }, "2026-07-31")
+    ?.buildId === "B");
+check("an untouched bowl beats an old one",
+  suggestBuild(bowls, { A: "2026-07-01", B: "2026-07-02" }, "2026-07-31")?.buildId === "C");
+check("a fallback eaten recently doesn't change the rotation",
+  suggestBuild(bowls, { A: "2026-07-30", B: "2026-07-20", C: "2026-07-29", FALLBACK: "2026-07-31" },
+    "2026-07-31")?.buildId === "B");
+
+console.log("\nprep sessions:");
+// 2026-08-02 is a Sunday.
+check("prep day is today", prepDueOn(0, "2026-08-02", undefined) === "today");
+check("done today reads as done", prepDueOn(0, "2026-08-02", "2026-08-02") === "done");
+check("never done and the day has passed -> overdue",
+  prepDueOn(0, "2026-08-04", undefined) === "overdue");
+check("done this week -> upcoming, not overdue",
+  prepDueOn(0, "2026-08-04", "2026-08-02") === "upcoming");
+check("done last week and the day has passed -> overdue",
+  prepDueOn(0, "2026-08-04", "2026-07-26") === "overdue");
+check("no weekday set -> upcoming", prepDueOn(null, "2026-08-04", undefined) === "upcoming");
 
 console.log("\nsignup validation:");
 check("short password rejected",
